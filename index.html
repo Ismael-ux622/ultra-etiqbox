@@ -2922,18 +2922,117 @@ function doLogout(){
   location.reload();
 }
 
+const ADMIN_CNPJ = '28464601001570';
+
 function iniciarApp(){
-  // Esconde tela de login, mostra app
   $('telaLogin').style.display='none';
-  // Mostra barra de usuário
   const lb=$('logoutBar'); lb.style.display='flex';
   if(sessao){
     $('lbLoja').textContent=sessao.loja.nome_loja||'Loja';
     $('lbNome').textContent=sessao.nome;
+    // Mostra botão admin só para o administrador
+    if(sessao.cnpj===ADMIN_CNPJ){
+      $('btnAdmin').style.display='flex';
+      $('btnAdmin').style.alignItems='center';
+      $('btnAdmin').style.justifyContent='center';
+    }
+    // Atualiza último acesso
+    atualizarUltimoAcesso();
   }
-  // Inicia o app normalmente
   init();
 }
+
+async function atualizarUltimoAcesso(){
+  if(!sessao) return;
+  try{
+    await sbFetch(`/rest/v1/lojas?cnpj=eq.${sessao.cnpj}`,'PATCH',{
+      ultimo_acesso: new Date().toISOString(),
+      ultimo_usuario: sessao.nome
+    });
+  }catch(e){}
+}
+
+function openAdmin(){
+  $('ovAdmin').classList.add('open');
+  carregarAdmin();
+}
+function closeAdmin(){ $('ovAdmin').classList.remove('open'); }
+
+async function carregarAdmin(){
+  $('adminLista').innerHTML='<div style="text-align:center;padding:24px;color:var(--t3)">Carregando...</div>';
+  try{
+    // Busca lojas, bipagens e catálogo em paralelo
+    const [rLojas, rBipagens, rCatalogo] = await Promise.all([
+      sbFetch('/rest/v1/lojas?select=*&order=criado_em.desc'),
+      sbFetch('/rest/v1/produtos?select=cnpj_loja'),
+      sbFetch('/rest/v1/catalogo?select=id,criado_por_loja&order=criado_em.desc')
+    ]);
+
+    const lojas = rLojas.data||[];
+    const bipagens = rBipagens.data||[];
+    const catalogo = rCatalogo.data||[];
+
+    // Resumo
+    $('adminTotalLojas').textContent = lojas.length;
+    $('adminTotalBipagens').textContent = bipagens.length;
+    $('adminTotalCatalogo').textContent = catalogo.length;
+
+    // Bipagens por loja
+    const bipPorLoja = {};
+    bipagens.forEach(b=>{ bipPorLoja[b.cnpj_loja]=(bipPorLoja[b.cnpj_loja]||0)+1; });
+
+    // Produtos novos por loja
+    const novPorLoja = {};
+    catalogo.forEach(c=>{ if(c.criado_por_loja) novPorLoja[c.criado_por_loja]=(novPorLoja[c.criado_por_loja]||0)+1; });
+
+    if(!lojas.length){
+      $('adminLista').innerHTML='<div style="text-align:center;padding:24px;color:var(--t3)">Nenhuma loja cadastrada ainda.</div>';
+      return;
+    }
+
+    $('adminLista').innerHTML = lojas.map(l=>{
+      const bips = bipPorLoja[l.cnpj]||0;
+      const novos = novPorLoja[l.cnpj]||0;
+      const acesso = l.ultimo_acesso ? new Date(l.ultimo_acesso).toLocaleString('pt-BR') : 'Nunca';
+      const usuario = l.ultimo_usuario||'—';
+      return `
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
+        <div style="font-size:24px">🏪</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:800;color:var(--t1)">${l.nome_loja||'Loja'} <span style="font-size:10px;color:var(--t3);font-weight:400">CNPJ: ${l.cnpj}</span></div>
+          <div style="font-size:11px;color:var(--t3);margin-top:3px">
+            📍 ${l.cidade||'—'} &nbsp;·&nbsp; 
+            🕐 Último acesso: <strong style="color:var(--t2)">${acesso}</strong> (${usuario}) &nbsp;·&nbsp;
+            📦 <strong style="color:var(--ac)">${bips} bipagens</strong>
+            ${novos>0?`&nbsp;·&nbsp; ⭐ <strong style="color:var(--Y)">${novos} produto(s) novo(s) adicionado(s)</strong>`:''}
+          </div>
+        </div>
+        <button onclick="excluirLoja('${l.cnpj}','${(l.nome_loja||'').replace(/'/g,"\\'")}')}"
+          style="background:var(--Rb);border:1px solid var(--R);color:#f87171;padding:6px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
+          🗑 Excluir
+        </button>
+      </div>`;
+    }).join('');
+
+  }catch(e){
+    $('adminLista').innerHTML='<div style="text-align:center;padding:24px;color:#f87171">Erro ao carregar dados.</div>';
+  }
+}
+
+async function excluirLoja(cnpj, nome){
+  if(!confirm(`Tem certeza que deseja excluir a loja "${nome}"?\n\nIsso vai apagar o cadastro e todas as bipagens dela. Esta ação não pode ser desfeita.`)) return;
+  try{
+    await sbFetch(`/rest/v1/produtos?cnpj_loja=eq.${cnpj}`,'DELETE');
+    await sbFetch(`/rest/v1/usuarios?cnpj=eq.${cnpj}`,'DELETE');
+    await sbFetch(`/rest/v1/lojas?cnpj=eq.${cnpj}`,'DELETE');
+    toast(`Loja ${nome} excluída com sucesso`,'s');
+    carregarAdmin();
+  }catch(e){
+    toast('Erro ao excluir loja','e');
+  }
+}
+
+
 
 /* ─── Verificar sessão ao carregar ─── */
 document.addEventListener('DOMContentLoaded',function(){
@@ -2975,5 +3074,44 @@ document.addEventListener('keydown',e=>{
   if(e.key==='-'&&!e.target.matches('input,select'))chQ(-1);
 });
 </script>
+<!-- MODAL ADMIN -->
+<div class="ov" id="ovAdmin" onclick="if(event.target===this)closeAdmin()" style="z-index:10000">
+  <div class="modal" style="width:700px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;position:relative">
+    <button onclick="closeAdmin()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer">✕</button>
+    <h2 style="margin-bottom:2px">👑 Painel Administrador</h2>
+    <p style="font-size:11px;color:var(--t3);margin-bottom:16px">Ultra EtiqBox — Visão geral da rede</p>
+
+    <!-- Resumo -->
+    <div id="adminResumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--ac)" id="adminTotalLojas">—</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Lojas cadastradas</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--G)" id="adminTotalBipagens">—</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Total de bipagens</div>
+      </div>
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:24px;font-weight:900;color:var(--Y)" id="adminTotalCatalogo">—</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:2px">Produtos no catálogo</div>
+      </div>
+    </div>
+
+    <!-- Lista de lojas -->
+    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Lojas cadastradas</div>
+    <div id="adminLista" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">
+      <div style="text-align:center;padding:24px;color:var(--t3)">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- BOTÃO FLUTUANTE ADMIN -->
+<button id="btnAdmin" onclick="openAdmin()" style="display:none;position:fixed;bottom:90px;right:20px;z-index:9998;
+  background:linear-gradient(135deg,#7c3aed,#5b21b6);color:#fff;border:none;
+  width:52px;height:52px;border-radius:50%;font-size:20px;cursor:pointer;
+  box-shadow:0 4px 20px rgba(124,58,237,.5);transition:transform .15s"
+  onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+  👑
+</button>
 </body>
 </html>
