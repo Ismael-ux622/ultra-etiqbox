@@ -1179,22 +1179,41 @@ html,body{height:100%;min-height:100vh;font-family:system-ui,sans-serif;backgrou
   </div>
 </div>
 
-<!-- MODAL SUPORTE -->
+<!-- MODAL SUPORTE — CHAT ONLINE -->
 <div class="ov" id="ovSuporte" onclick="if(event.target===this)closeSuporte()">
-  <div class="modal" style="width:360px;position:relative">
-    <button onclick="closeSuporte()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;line-height:1">✕</button>
-    <h2 style="margin-bottom:4px">💬 Suporte</h2>
-    <p style="font-size:11px;color:var(--t3);margin-bottom:16px">Fale com a nossa equipe pelo canal abaixo.</p>
-    <a href="https://wa.me/559391604343" target="_blank" rel="noopener"
-      style="display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:10px;background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.4);text-decoration:none;color:var(--t1);transition:all .15s"
-      onmouseover="this.style.background='rgba(37,211,102,.22)'" onmouseout="this.style.background='rgba(37,211,102,.12)'">
-      <span style="font-size:28px;line-height:1">📱</span>
-      <div>
-        <div style="font-size:13px;font-weight:800;color:#25d366">WhatsApp</div>
-        <div style="font-size:11px;color:var(--t2);margin-top:2px">Atendimento rápido via mensagem</div>
+  <div class="modal" style="width:420px;max-width:96vw;height:560px;max-height:90vh;display:flex;flex-direction:column;padding:0;overflow:hidden;position:relative">
+
+    <!-- Header do chat -->
+    <div style="padding:14px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px;flex-shrink:0;background:linear-gradient(135deg,var(--s1),var(--s2))">
+      <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">💬</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:800;color:var(--t1)">Suporte Ultra EtiqBox</div>
+        <div style="font-size:10px;color:var(--t3);display:flex;align-items:center;gap:4px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block"></span>
+          Online
+        </div>
       </div>
-      <span style="margin-left:auto;font-size:18px;color:#25d366">→</span>
-    </a>
+      <button onclick="closeSuporte()" style="background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;line-height:1;padding:4px">✕</button>
+    </div>
+
+    <!-- Área de mensagens -->
+    <div id="chatMsgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent">
+      <div id="chatLoading" style="text-align:center;color:var(--t3);font-size:12px;padding:20px">Carregando mensagens…</div>
+    </div>
+
+    <!-- Input de mensagem -->
+    <div style="padding:12px;border-top:1px solid var(--b1);display:flex;gap:8px;flex-shrink:0;background:var(--s2)">
+      <input id="chatInput" type="text" placeholder="Digite sua mensagem…"
+        style="flex:1;padding:10px 14px;border-radius:20px;border:1.5px solid var(--b1);background:var(--s3);color:var(--t1);font-size:13px;outline:none;font-family:inherit"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviarMsgChat()}"
+        onfocus="this.style.borderColor='var(--ac)'" onblur="this.style.borderColor='var(--b1)'">
+      <button onclick="enviarMsgChat()" id="chatSendBtn"
+        style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:opacity .15s"
+        onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      </button>
+    </div>
+
   </div>
 </div>
 
@@ -2055,8 +2074,258 @@ const CFG_CATS=[
   {key:'PERFUMARIA',  label:'Perfumaria'},
   {key:'LEITES',      label:'Leites'},
 ];
-function openSuporte(){$('ovSuporte').classList.add('open')}
-function closeSuporte(){$('ovSuporte').classList.remove('open')}
+/* ═══════════════════════════════════════════
+   CHAT DE SUPORTE — TEMPO REAL (SUPABASE)
+═══════════════════════════════════════════ */
+let _chatSub = null;
+let _chatAberto = false;
+
+function openSuporte(){
+  if(!sessao){ toast('Faça login para usar o chat','e'); return; }
+  $('ovSuporte').classList.add('open');
+  _chatAberto = true;
+  carregarMsgsChat();
+  iniciarRealtimeChat();
+  // Marca mensagens do admin como lidas
+  setTimeout(()=>marcarLidasChat(), 1000);
+}
+
+function closeSuporte(){
+  $('ovSuporte').classList.remove('open');
+  _chatAberto = false;
+  if(_chatSub){ _chatSub.unsubscribe(); _chatSub=null; }
+}
+
+async function carregarMsgsChat(){
+  $('chatLoading').style.display='block';
+  $('chatLoading').textContent='Carregando mensagens…';
+  try{
+    const cnpj = sessao.cnpj;
+    const r = await sbFetch(`/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&order=criado_em.asc&limit=100`);
+    $('chatLoading').style.display='none';
+    if(r.ok && r.data){
+      const msgs = $('chatMsgs');
+      // Limpa mensagens antigas (mantém o loading)
+      Array.from(msgs.children).forEach(c=>{ if(c.id!=='chatLoading') c.remove(); });
+      if(r.data.length===0){
+        renderMsgSistema('👋 Olá! Como podemos ajudar?');
+      } else {
+        r.data.forEach(m => renderMsgChat(m));
+      }
+      scrollChatBottom();
+    }
+  }catch(e){
+    $('chatLoading').textContent='Erro ao carregar. Tente novamente.';
+  }
+}
+
+function iniciarRealtimeChat(){
+  if(_chatSub) return;
+  if(!sessao) return;
+  const cnpj = sessao.cnpj;
+
+  // Supabase Realtime via SSE
+  const url = `${SB_URL}/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&order=criado_em.asc`;
+  
+  // Polling a cada 3s como fallback confiável para HTML standalone
+  _chatSub = { active: true };
+  let ultimoId = null;
+
+  async function poll(){
+    if(!_chatSub || !_chatSub.active) return;
+    try{
+      const query = ultimoId
+        ? `/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&id=neq.placeholder&order=criado_em.asc&criado_em=gt.${encodeURIComponent(_ultimaMsg||'1970-01-01')}`
+        : `/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&order=criado_em.asc&limit=100`;
+      const r = await sbFetch(query);
+      if(r.ok && r.data && r.data.length){
+        if(ultimoId !== null){
+          // Só adiciona mensagens novas
+          r.data.forEach(m=>{
+            if(!document.getElementById('msg-'+m.id)){
+              renderMsgChat(m);
+              scrollChatBottom();
+              if(!m.de_admin) marcarLidasChat();
+            }
+          });
+        }
+        ultimoId = r.data[r.data.length-1].id;
+        _ultimaMsg = r.data[r.data.length-1].criado_em;
+      } else if(ultimoId === null){
+        ultimoId = 'none';
+        renderMsgSistema('👋 Olá! Como podemos ajudar?');
+        scrollChatBottom();
+      }
+    }catch(e){}
+    if(_chatSub && _chatSub.active) setTimeout(poll, 3000);
+  }
+  poll();
+
+  _chatSub.unsubscribe = ()=>{ _chatSub.active=false; };
+}
+
+let _ultimaMsg = null;
+
+function renderMsgSistema(texto){
+  const msgs = $('chatMsgs');
+  const d = document.createElement('div');
+  d.style.cssText='text-align:center;font-size:11px;color:var(--t3);padding:4px 0';
+  d.textContent=texto;
+  msgs.appendChild(d);
+}
+
+function renderMsgChat(m){
+  const msgs = $('chatMsgs');
+  if(document.getElementById('msg-'+m.id)) return;
+  const deAdmin = m.de_admin;
+  const d = document.createElement('div');
+  d.id = 'msg-'+m.id;
+  d.style.cssText=`display:flex;flex-direction:column;align-items:${deAdmin?'flex-start':'flex-end'};gap:2px`;
+
+  const hora = new Date(m.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const remetente = deAdmin ? 'Suporte' : (m.nome_usuario||'Você');
+
+  d.innerHTML=`
+    <div style="font-size:9px;color:var(--t3);padding:0 4px">${remetente} · ${hora}</div>
+    <div style="max-width:80%;padding:9px 13px;border-radius:${deAdmin?'4px 16px 16px 16px':'16px 16px 4px 16px'};
+      background:${deAdmin?'var(--s3)':'linear-gradient(135deg,var(--ac),var(--ac2))'};
+      color:${deAdmin?'var(--t1)':'#fff'};font-size:13px;line-height:1.5;
+      border:${deAdmin?'1px solid var(--b1)':'none'};
+      word-break:break-word">${escHtml(m.mensagem)}</div>
+  `;
+  msgs.appendChild(d);
+}
+
+function escHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollChatBottom(){
+  const msgs=$('chatMsgs');
+  setTimeout(()=>{ msgs.scrollTop=msgs.scrollHeight; },50);
+}
+
+async function enviarMsgChat(){
+  if(!sessao){ toast('Faça login para usar o chat','e'); return; }
+  const input=$('chatInput');
+  const texto=input.value.trim();
+  if(!texto) return;
+  input.value='';
+  const btn=$('chatSendBtn'); btn.disabled=true;
+  try{
+    const r = await sbFetch('/rest/v1/chat_suporte','POST',{
+      cnpj_loja: sessao.cnpj,
+      nome_loja: sessao.loja.nome_loja||'Loja',
+      nome_usuario: sessao.nome,
+      mensagem: texto,
+      de_admin: false
+    });
+    if(!r.ok){ toast('Erro ao enviar. Tente novamente.','e'); }
+  }catch(e){ toast('Erro de conexão.','e'); }
+  finally{ btn.disabled=false; input.focus(); }
+}
+
+async function marcarLidasChat(){
+  if(!sessao) return;
+  try{
+    await sbFetch(`/rest/v1/chat_suporte?cnpj_loja=eq.${sessao.cnpj}&de_admin=eq.true&lida=eq.false`,'PATCH',{lida:true});
+  }catch(e){}
+}
+
+/* ═══════════════════════════════════════════
+   CHAT ADMIN — VER TODAS AS LOJAS
+═══════════════════════════════════════════ */
+let _chatAdminLoja = null;
+let _chatAdminSub = null;
+let _ultimaMsgAdmin = null;
+
+async function abrirChatAdmin(cnpj, nomeLoja){
+  _chatAdminLoja = {cnpj, nomeLoja};
+  // Mostra painel de chat dentro do admin
+  const container = $('adminChatBox');
+  if(!container) return;
+  container.style.display='flex';
+  $('adminChatTitulo').textContent=`💬 ${nomeLoja}`;
+  $('adminChatMsgs').innerHTML='<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px">Carregando…</div>';
+  _ultimaMsgAdmin=null;
+
+  // Carrega mensagens
+  try{
+    const r = await sbFetch(`/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&order=criado_em.asc&limit=100`);
+    const msgs=$('adminChatMsgs');
+    msgs.innerHTML='';
+    if(r.ok && r.data){
+      if(!r.data.length) msgs.innerHTML='<div style="text-align:center;color:var(--t3);font-size:12px;padding:20px">Nenhuma mensagem ainda.</div>';
+      else r.data.forEach(m=>renderAdminMsg(m));
+      if(r.data.length) _ultimaMsgAdmin=r.data[r.data.length-1].criado_em;
+    }
+    scrollAdminBottom();
+  }catch(e){}
+
+  // Polling
+  if(_chatAdminSub){ _chatAdminSub.active=false; }
+  _chatAdminSub={active:true};
+  async function pollAdmin(){
+    if(!_chatAdminSub||!_chatAdminSub.active) return;
+    try{
+      const q=_ultimaMsgAdmin
+        ? `/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&criado_em=gt.${encodeURIComponent(_ultimaMsgAdmin)}&order=criado_em.asc`
+        : `/rest/v1/chat_suporte?cnpj_loja=eq.${cnpj}&order=criado_em.asc&limit=1`;
+      const r=await sbFetch(q);
+      if(r.ok&&r.data&&r.data.length){
+        r.data.forEach(m=>{
+          if(!document.getElementById('amsg-'+m.id)) renderAdminMsg(m);
+        });
+        _ultimaMsgAdmin=r.data[r.data.length-1].criado_em;
+        scrollAdminBottom();
+      }
+    }catch(e){}
+    if(_chatAdminSub&&_chatAdminSub.active) setTimeout(pollAdmin,3000);
+  }
+  pollAdmin();
+}
+
+function renderAdminMsg(m){
+  const msgs=$('adminChatMsgs');
+  if(document.getElementById('amsg-'+m.id)) return;
+  const deAdmin=m.de_admin;
+  const d=document.createElement('div');
+  d.id='amsg-'+m.id;
+  d.style.cssText=`display:flex;flex-direction:column;align-items:${deAdmin?'flex-end':'flex-start'};gap:2px;margin-bottom:6px`;
+  const hora=new Date(m.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  d.innerHTML=`
+    <div style="font-size:9px;color:var(--t3);padding:0 4px">${deAdmin?'Você (Admin)':m.nome_usuario} · ${hora}</div>
+    <div style="max-width:80%;padding:8px 12px;border-radius:${deAdmin?'16px 4px 16px 16px':'4px 16px 16px 16px'};
+      background:${deAdmin?'linear-gradient(135deg,var(--ac),var(--ac2))':'var(--s3)'};
+      color:${deAdmin?'#fff':'var(--t1)'};font-size:12px;line-height:1.5;
+      border:${deAdmin?'none':'1px solid var(--b1)'};word-break:break-word">${escHtml(m.mensagem)}</div>
+  `;
+  msgs.appendChild(d);
+}
+
+function scrollAdminBottom(){
+  const m=$('adminChatMsgs');
+  if(m) setTimeout(()=>{m.scrollTop=m.scrollHeight;},50);
+}
+
+async function enviarMsgAdmin(){
+  if(!_chatAdminLoja) return;
+  const input=$('adminChatInput');
+  const texto=input.value.trim();
+  if(!texto) return;
+  input.value='';
+  try{
+    await sbFetch('/rest/v1/chat_suporte','POST',{
+      cnpj_loja: _chatAdminLoja.cnpj,
+      nome_loja: _chatAdminLoja.nomeLoja,
+      nome_usuario: 'Admin',
+      mensagem: texto,
+      de_admin: true
+    });
+  }catch(e){ toast('Erro ao enviar','e'); }
+}
+
+
 function openCfg(){
   const body=$('cfgBody');
   body.innerHTML=CFG_CATS.map(({key,label})=>{
@@ -2902,12 +3171,21 @@ function openAdmin(){
   $('ovAdmin').classList.add('open');
   carregarAdmin();
 }
-function closeAdmin(){ $('ovAdmin').classList.remove('open'); }
+function closeAdmin(){
+  $('ovAdmin').classList.remove('open');
+  if(_chatAdminSub){ _chatAdminSub.active=false; _chatAdminSub=null; }
+}
+
+function fecharChatAdmin(){
+  $('adminChatBox').style.display='none';
+  $('adminChatPlaceholder').style.display='flex';
+  if(_chatAdminSub){ _chatAdminSub.active=false; _chatAdminSub=null; }
+  _chatAdminLoja=null;
+}
 
 async function carregarAdmin(){
   $('adminLista').innerHTML='<div style="text-align:center;padding:24px;color:var(--t3)">Carregando...</div>';
   try{
-    // Busca lojas, bipagens e catálogo em paralelo
     const [rLojas, rBipagens, rCatalogo] = await Promise.all([
       sbFetch('/rest/v1/lojas?select=*&order=criado_em.desc'),
       sbFetch('/rest/v1/produtos?select=cnpj_loja'),
@@ -2918,16 +3196,12 @@ async function carregarAdmin(){
     const bipagens = rBipagens.data||[];
     const catalogo = rCatalogo.data||[];
 
-    // Resumo
     $('adminTotalLojas').textContent = lojas.length;
     $('adminTotalBipagens').textContent = bipagens.length;
     $('adminTotalCatalogo').textContent = catalogo.length;
 
-    // Bipagens por loja
     const bipPorLoja = {};
     bipagens.forEach(b=>{ bipPorLoja[b.cnpj_loja]=(bipPorLoja[b.cnpj_loja]||0)+1; });
-
-    // Produtos novos por loja
     const novPorLoja = {};
     catalogo.forEach(c=>{ if(c.criado_por_loja) novPorLoja[c.criado_por_loja]=(novPorLoja[c.criado_por_loja]||0)+1; });
 
@@ -2940,23 +3214,31 @@ async function carregarAdmin(){
       const bips = bipPorLoja[l.cnpj]||0;
       const novos = novPorLoja[l.cnpj]||0;
       const acesso = l.ultimo_acesso ? new Date(l.ultimo_acesso).toLocaleString('pt-BR') : 'Nunca';
-      const usuario = l.ultimo_usuario||'—';
+      const nomeLoja = (l.nome_loja||'Loja').replace(/'/g,"\\'");
       return `
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px">
-        <div style="font-size:24px">🏪</div>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:800;color:var(--t1)">${l.nome_loja||'Loja'} <span style="font-size:10px;color:var(--t3);font-weight:400">CNPJ: ${l.cnpj}</span></div>
-          <div style="font-size:11px;color:var(--t3);margin-top:3px">
-            📍 ${l.cidade||'—'} &nbsp;·&nbsp; 
-            🕐 Último acesso: <strong style="color:var(--t2)">${acesso}</strong> (${usuario}) &nbsp;·&nbsp;
-            📦 <strong style="color:var(--ac)">${bips} bipagens</strong>
-            ${novos>0?`&nbsp;·&nbsp; ⭐ <strong style="color:var(--Y)">${novos} produto(s) novo(s) adicionado(s)</strong>`:''}
+      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:18px">🏪</span>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:800;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${l.nome_loja||'Loja'}</div>
+            <div style="font-size:10px;color:var(--t3)">${l.cidade||'—'} · CNPJ: ${l.cnpj}</div>
           </div>
         </div>
-        <button onclick="excluirLoja('${l.cnpj}','${(l.nome_loja||'').replace(/'/g,"\\'")}')}"
-          style="background:var(--Rb);border:1px solid var(--R);color:#f87171;padding:6px 12px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">
-          🗑 Excluir
-        </button>
+        <div style="font-size:10px;color:var(--t3);margin-bottom:8px">
+          🕐 ${acesso} &nbsp;·&nbsp;
+          📦 <strong style="color:var(--ac)">${bips}</strong> bipagens
+          ${novos>0?`&nbsp;·&nbsp; ⭐ <strong style="color:var(--Y)">${novos}</strong> novos`:''}
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="abrirChatAdmin('${l.cnpj}','${nomeLoja}')"
+            style="flex:1;background:rgba(59,130,246,.12);border:1px solid var(--ac);color:var(--ac);padding:5px 8px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+            💬 Chat
+          </button>
+          <button onclick="excluirLoja('${l.cnpj}','${nomeLoja}')"
+            style="background:var(--Rb);border:1px solid var(--R);color:#f87171;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">
+            🗑
+          </button>
+        </div>
       </div>`;
     }).join('');
 
@@ -3022,32 +3304,68 @@ document.addEventListener('keydown',e=>{
 </script>
 <!-- MODAL ADMIN -->
 <div class="ov" id="ovAdmin" onclick="if(event.target===this)closeAdmin()" style="z-index:10000">
-  <div class="modal" style="width:700px;max-width:96vw;max-height:88vh;display:flex;flex-direction:column;position:relative">
-    <button onclick="closeAdmin()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer">✕</button>
-    <h2 style="margin-bottom:2px">👑 Painel Administrador</h2>
-    <p style="font-size:11px;color:var(--t3);margin-bottom:16px">Ultra EtiqBox — Visão geral da rede</p>
+  <div class="modal" style="width:780px;max-width:96vw;max-height:88vh;display:flex;gap:0;padding:0;overflow:hidden;position:relative;flex-direction:row">
 
-    <!-- Resumo -->
-    <div id="adminResumo" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:24px;font-weight:900;color:var(--ac)" id="adminTotalLojas">—</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:2px">Lojas cadastradas</div>
+    <!-- Painel esquerdo: lista de lojas -->
+    <div style="width:340px;flex-shrink:0;display:flex;flex-direction:column;border-right:1px solid var(--b1)">
+      <div style="padding:18px 18px 12px;border-bottom:1px solid var(--b1);flex-shrink:0">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <h2 style="margin:0;font-size:16px">👑 Painel Admin</h2>
+          <button onclick="closeAdmin()" style="background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer">✕</button>
+        </div>
+        <p style="font-size:11px;color:var(--t3);margin:4px 0 0">Ultra EtiqBox — Rede de lojas</p>
       </div>
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:24px;font-weight:900;color:var(--G)" id="adminTotalBipagens">—</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:2px">Total de bipagens</div>
+
+      <!-- Resumo -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;flex-shrink:0">
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--ac)" id="adminTotalLojas">—</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:2px">Lojas</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--G)" id="adminTotalBipagens">—</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:2px">Bipagens</div>
+        </div>
+        <div style="background:var(--s2);border:1px solid var(--b1);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-size:20px;font-weight:900;color:var(--Y)" id="adminTotalCatalogo">—</div>
+          <div style="font-size:9px;color:var(--t3);margin-top:2px">Catálogo</div>
+        </div>
       </div>
-      <div style="background:var(--s2);border:1px solid var(--b1);border-radius:10px;padding:12px;text-align:center">
-        <div style="font-size:24px;font-weight:900;color:var(--Y)" id="adminTotalCatalogo">—</div>
-        <div style="font-size:10px;color:var(--t3);margin-top:2px">Produtos no catálogo</div>
+
+      <div style="font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;padding:0 12px 6px">Lojas cadastradas</div>
+      <div id="adminLista" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:6px;padding:0 12px 12px">
+        <div style="text-align:center;padding:24px;color:var(--t3)">Carregando...</div>
       </div>
     </div>
 
-    <!-- Lista de lojas -->
-    <div style="font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Lojas cadastradas</div>
-    <div id="adminLista" style="overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px">
-      <div style="text-align:center;padding:24px;color:var(--t3)">Carregando...</div>
+    <!-- Painel direito: chat com a loja selecionada -->
+    <div id="adminChatBox" style="flex:1;display:none;flex-direction:column">
+      <!-- Header do chat -->
+      <div style="padding:14px 16px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <div style="font-size:13px;font-weight:800;color:var(--t1);flex:1" id="adminChatTitulo">Selecione uma loja</div>
+        <button onclick="fecharChatAdmin()" style="background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <!-- Mensagens -->
+      <div id="adminChatMsgs" style="flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin"></div>
+      <!-- Input -->
+      <div style="padding:10px 12px;border-top:1px solid var(--b1);display:flex;gap:8px;flex-shrink:0;background:var(--s2)">
+        <input id="adminChatInput" type="text" placeholder="Responder…"
+          style="flex:1;padding:8px 12px;border-radius:16px;border:1.5px solid var(--b1);background:var(--s3);color:var(--t1);font-size:12px;outline:none;font-family:inherit"
+          onkeydown="if(event.key==='Enter')enviarMsgAdmin()">
+        <button onclick="enviarMsgAdmin()"
+          style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--ac),var(--ac2));border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
     </div>
+
+    <!-- Placeholder quando nenhuma loja selecionada -->
+    <div id="adminChatPlaceholder" style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:var(--t3)">
+      <div style="font-size:36px">💬</div>
+      <div style="font-size:13px;font-weight:700">Selecione uma loja para conversar</div>
+      <div style="font-size:11px">Clique em "Chat" ao lado da loja desejada</div>
+    </div>
+
   </div>
 </div>
 
