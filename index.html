@@ -1,1634 +1,207 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Ultra Stock</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%233b82f6'/><stop offset='1' stop-color='%232563eb'/></linearGradient></defs><rect x='2' y='2' width='60' height='60' rx='14' fill='url(%23g)'/><path d='M10 22 L32 12 L54 22 L54 50 L32 60 L10 50 Z' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round'/><path d='M10 22 L32 32 L54 22' fill='none' stroke='%23fff' stroke-width='2.5' stroke-linejoin='round'/><path d='M32 32 L32 60' stroke='%23fff' stroke-width='2.5'/><circle cx='44' cy='44' r='8' fill='%23fff'/><circle cx='44' cy='41' r='2' fill='%23c41c1c'/><circle cx='44' cy='45' r='2' fill='%23e8a000'/><circle cx='44' cy='49' r='2' fill='%231a8a3a'/></svg>">
-<!-- SUPABASE CONFIG -->
-<script>
-const SB_URL = 'https://akezfxdqtmqbunftcflf.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFrZXpmeGRxdG1xYnVuZnRjZmxmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NTk3MzgsImV4cCI6MjA5NDQzNTczOH0.832C-mgj1SXrRLeqE87nc_R-pyO5qQWJDlVh27ABlzk';
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tela de Login</title>
+    <style>
+        /* Reset básico */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-async function sbFetch(path, method='GET', body=null){
-  const opts = {
-    method,
-    headers:{
-      'Content-Type':'application/json',
-      'apikey':SB_KEY,
-      'Authorization':'Bearer '+SB_KEY,
-      'Prefer': method==='POST' ? 'return=representation' : ''
-    }
-  };
-  if(body) opts.body = JSON.stringify(body);
-  const r = await fetch(SB_URL+path, opts);
-  let data = null;
-  try{ data = await r.json(); }catch(e){ data = null; }
-  return {ok: r.ok, status: r.status, data};
-}
+        /* Container Principal: Centraliza tudo e cria o fundo escuro para as faíscas */
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: radial-gradient(circle, #1a1a2e, #0f0f1a);
+            overflow: hidden;
+            position: relative;
+        }
 
-// Sessão atual
-let sessao = JSON.parse(localStorage.getItem('ue_sessao')||'null');
+        /* --- EFEITO DAS MINI FAÍSCAS (BACKGROUND) --- */
+        .spark {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ffdf00, 0 0 15px #fff;
+            animation: floatSparks 6s linear infinite;
+            opacity: 0;
+            pointer-events: none; /* Garante que não atrapalhe os cliques */
+        }
 
-function salvarSessao(s){ sessao=s; localStorage.setItem('ue_sessao', JSON.stringify(s)); }
-function limparSessao(){ sessao=null; localStorage.removeItem('ue_sessao'); }
-</script>
-<style>
-/* ─────────────────────────────────────────
-    RESET + VARS
-───────────────────────────────────────── */
-*{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0f1117;--s1:#1a1d27;--s2:#252836;--s3:#2f3347;
-  --b1:#3a3f55;--b2:#4a5070;
-  --t1:#f0f0f0;--t2:#9ea3b8;--t3:#5a5f78;
-  --ac:#3b82f6;--ac2:#2563eb;--glow:rgba(59,130,246,.18);
-  --G:#16a34a;--Gb:rgba(22,163,74,.15);
-  --R:#dc2626;--Rb:rgba(220,38,38,.15);
-  --Y:#d97706;--Yb:rgba(217,119,6,.15);
-  --r:10px
-}
-:root[data-theme="light"]{
-  --bg:#f4f6fa;--s1:#ffffff;--s2:#f0f2f7;--s3:#e4e7ef;
-  --b1:#d6dae3;--b2:#b7bdcc;
-  --t1:#15181f;--t2:#565b6b;--t3:#8a90a0;
-  --glow:rgba(59,130,246,.15);
-  --Gb:rgba(22,163,74,.10);
-  --Rb:rgba(220,38,38,.08);
-  --Yb:rgba(217,119,6,.10);
-}
-html,body{height:100%;min-height:100vh;font-family:system-ui,sans-serif;background:var(--bg);color:var(--t1);overflow:hidden}
+        @keyframes floatSparks {
+            0% {
+                transform: translateY(100vh) translateX(0) scale(0.5);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-10vh) translateX(50px) scale(1.2);
+                opacity: 0;
+            }
+        }
 
+        /* --- CARD DE LOGIN CENTRALIZADO --- */
+        .login-card {
+            width: 100%;
+            max-width: 380px; /* Evita o efeito de "zoom 120%" em telas grandes */
+            padding: 40px 30px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px); /* Efeito de vidro fosco chique */
+            border-radius: 12px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            color: #ffffff;
+            z-index: 10; /* Garante que o card fique acima das faíscas */
+        }
 
-/* ─── TELA DE SELEÇÃO DE MÓDULOS ─── */
-#telaModulos{
-  position:fixed;inset:0;z-index:9998;
-  background:var(--bg);
-  display:none;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:0;
-}
-.mod-header{
-  width:100%;max-width:860px;
-  display:flex;align-items:center;justify-content:space-between;
-  padding:0 24px 28px;
-}
-.mod-header-info{display:flex;flex-direction:column;gap:2px}
-.mod-header-info span:first-child{font-size:13px;color:var(--t3)}
-.mod-header-info strong{font-size:15px;color:var(--t1);font-weight:800}
-.mod-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:16px;
-  width:100%;max-width:860px;
-  padding:0 24px;
-}
-@media(max-width:700px){.mod-grid{grid-template-columns:repeat(2,1fr)}}
-.mod-card{
-  background:var(--s1);
-  border:1.5px solid var(--b1);
-  border-radius:16px;
-  padding:28px 20px 22px;
-  cursor:pointer;
-  transition:all .18s;
-  display:flex;flex-direction:column;align-items:flex-start;gap:10px;
-  position:relative;overflow:hidden;
-}
-.mod-card:hover:not(.mod-locked){
-  border-color:var(--ac);
-  background:var(--s2);
-  transform:translateY(-2px);
-  box-shadow:0 8px 24px rgba(59,130,246,.15);
-}
-.mod-card.mod-locked{cursor:not-allowed;opacity:.55}
-.mod-icon{font-size:32px;line-height:1}
-.mod-name{font-size:14px;font-weight:800;color:var(--t1)}
-.mod-desc{font-size:11px;color:var(--t3);line-height:1.5}
-.mod-badge{
-  position:absolute;top:12px;right:12px;
-  font-size:9px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
-  padding:3px 8px;border-radius:20px;
-}
-.mod-badge.ativo{background:rgba(59,130,246,.15);color:var(--ac);border:1px solid var(--ac)}
-.mod-badge.breve{background:var(--s3);color:var(--t3);border:1px solid var(--b1)}
-.mod-footer{
-  width:100%;max-width:860px;
-  text-align:center;padding:20px 24px 0;
-  font-size:10px;color:var(--t3);
-}
+        .login-card h2 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
 
-/* ─── TELA DE LOGIN — PREMIUM (ULTRA STOCK CUSTOM) ─── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-#telaLogin{
-  position:fixed;inset:0;z-index:9999;
-  background:#050508;
-  display:none;
-  align-items:center;justify-content:center;
-  flex-direction:column;gap:0;
-  font-family:'Inter',system-ui,sans-serif;
-  overflow:hidden;
-}
+        /* Grupos de Input */
+        .input-group {
+            margin-bottom: 20px;
+        }
 
-/* Camada Minimalista de Trás (Blur + Glows Orgânicos Animados) */
-.premium-bg-blur {
-  position:absolute;inset:0;
-  width:100%;height:100%;
-  overflow:hidden;pointer-events:none;
-  z-index:1;
-}
-.blur-orb {
-  position:absolute;border-radius:50%;
-  filter:blur(140px);mix-blend-mode:screen;
-  opacity:0.25;animation:orbMovement 25s ease-in-out infinite alternate;
-}
-.blur-orb-1 {
-  width:500px;height:500px;
-  background:radial-gradient(circle, #DC2626 0%, transparent 80%);
-  top:-10%;left:-10%;
-}
-.blur-orb-2 {
-  width:600px;height:600px;
-  background:radial-gradient(circle, #FACC15 0%, transparent 80%);
-  bottom:-15%;right:-10%;
-  animation-delay:-5s;animation-duration:30s;
-}
-.blur-orb-3 {
-  width:400px;height:400px;
-  background:radial-gradient(circle, #3b82f6 0%, transparent 80%);
-  top:40%;left:50%;transform:translate(-50%, -50%);
-  opacity:0.12;animation-duration:20s;
-}
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #ccc;
+        }
 
-@keyframes orbMovement {
-  0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, -60px) scale(1.15); }
-  100% { transform: translate(-20px, 40px) scale(0.9); }
-}
+        .input-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.3s;
+        }
 
-#loginCanvas{
-  position:absolute;inset:0;margin:auto;
-  width:600px;height:600px;
-  opacity:.4;pointer-events:none;z-index:2;
-}
-.login-vignette{
-  position:absolute;inset:0;
-  background:radial-gradient(ellipse at center,transparent 20%,#050508 85%);
-  pointer-events:none;z-index:3;
-}
-.login-content{
-  position:relative;z-index:10;
-  width:100%;max-width:420px;
-  padding:0 24px;
-  display:flex;flex-direction:column;align-items:center;
-}
-/* Logo chevron */
-.login-chevron-wrap{
-  position:relative;width:96px;height:96px;
-  display:flex;align-items:center;justify-content:center;
-}
-.login-chevron-glow{
-  position:absolute;inset:0;
-  background:rgba(220,38,38,.35);border-radius:50%;
-  filter:blur(24px);transform:scale(1.5);
-  animation:pulse 2s ease-in-out infinite;
-}
-.login-chevron-ring1{
-  position:absolute;inset:0;border-radius:50%;
-  border:2px solid rgba(220,38,38,.2);
-  animation:spin 8s linear infinite;
-}
-.login-chevron-ring2{
-  position:absolute;inset:8px;border-radius:50%;
-  border:1px solid rgba(220,38,38,.1);
-  animation:spin 12s linear infinite reverse;
-}
-.login-chevrons{display:flex;flex-direction:column;align-items:center;gap:3px}
-.login-chevrons svg{animation:floatChev 2s ease-in-out infinite;}
-.login-chevrons svg:nth-child(2){animation-delay:.15s}
-.login-chevrons svg:nth-child(3){animation-delay:.3s}
+        .input-group input:focus {
+            border-color: #ffdf00;
+            box-shadow: 0 0 8px rgba(255, 223, 0, 0.3);
+        }
 
-/* Nome Principal Animado: Ultra Stock */
-.login-brand{
-  position:relative;margin-top:28px;text-align:center;
-}
-.login-brand-glow{
-  position:absolute;inset:-20px;
-  background:radial-gradient(circle, rgba(220,38,38,0.25) 0%, transparent 70%);
-  filter:blur(20px);
-  pointer-events:none;
-  animation:brandGlowPulse 4s ease-in-out infinite alternate;
-}
-.login-brand h1{
-  position:relative;
-  font-size:clamp(42px,9vw,58px);font-weight:900;
-  letter-spacing:-.03em;
-  display:flex;align-items:center;gap:12px;
-  margin:0;line-height:1;
-}
-.login-brand-ultra{
-  background:linear-gradient(180deg,#ffffff 0%,#f0f0f0 50%,#b5b5c0 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  opacity:0;transform:translateY(15px);transition:all .9s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.login-brand-ultra.show{opacity:1;transform:none}
-.login-brand-stock{
-  background:linear-gradient(180deg,#FACC15 0%,#f59e0b 50%,#92400e 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
-  filter:drop-shadow(0 2px 15px rgba(250,204,21,.35));
-  opacity:0;transform:translateY(15px);transition:all .9s cubic-bezier(0.16, 1, 0.3, 1) .15s;
-  position:relative;
-}
-.login-brand-stock.show{opacity:1;transform:none}
+        /* Botão de Entrar */
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            background: #ffdf00;
+            border: none;
+            border-radius: 6px;
+            color: #111;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+            margin-top: 10px;
+        }
 
-/* Brilho Linear Varrendo o Texto Periodicamente */
-.login-brand h1::after {
-  content: '';
-  position: absolute;inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-  transform: translateX(-100%) skewX(-30deg);
-  mix-blend-mode: overlay;
-  animation: textShineSweep 6s ease-in-out infinite;
-}
+        .btn-login:hover {
+            background: #ffe853;
+            box-shadow: 0 0 15px rgba(255, 223, 0, 0.4);
+        }
 
-@keyframes textShineSweep {
-  0%, 70% { transform: translateX(-100%) skewX(-30deg); opacity: 0; }
-  71% { opacity: 1; }
-  85%, 100% { transform: translateX(140%) skewX(-30deg); opacity: 0; }
-}
-@keyframes brandGlowPulse {
-  0% { transform: scale(0.9); opacity: 0.5; filter: blur(20px); }
-  100% { transform: scale(1.1); opacity: 0.9; filter: blur(35px); }
-}
+        /* --- CORREÇÃO DO TEXTO MISTURADO (CRIAR CONTA) --- */
+        .footer-text {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 14px;
+            color: #aaa;
+            display: flex;             /* Organiza o conteúdo em linha */
+            justify-content: center;   /* Centraliza o bloco */
+            gap: 5px;                  /* Cria um espaçamento seguro entre o texto e o link */
+            flex-wrap: wrap;           /* Se a tela for muito pequena, ele quebra a linha sem misturar */
+        }
 
-.login-brand-line{
-  height:1px;width:160px;margin:16px auto 0;
-  background:linear-gradient(90deg,transparent,rgba(220,38,38,0.8),#FACC15,rgba(220,38,38,0.8),transparent);
-  opacity:0;transform:scaleX(0);transition:all .8s cubic-bezier(0.16, 1, 0.3, 1) .4s;
-}
-.login-brand-line.show{opacity:1;transform:scaleX(1)}
+        .footer-text a {
+            color: #ffdf00;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.2s;
+        }
 
-/* Tagline */
-.login-tagline{
-  margin-top:16px;text-align:center;
-  opacity:0;transform:translateY(10px);transition:all .6s ease-out .5s;
-}
-.login-tagline.show{opacity:1;transform:none}
-.login-tagline p{font-size:15px;font-weight:500;color:#9A9AAA;letter-spacing:.02em;margin:0 0 4px}
-.login-tagline p span{color:#DC2626;font-weight:700}
-.login-tagline small{font-size:11px;color:#4A4A5A;text-transform:uppercase;letter-spacing:.12em}
-
-/* Card */
-.login-card-wrap{
-  position:relative;width:100%;margin-top:28px;
-  opacity:0;transform:translateY(20px);transition:all .7s ease-out .6s;
-}
-.login-card-wrap.show{opacity:1;transform:none}
-.login-card-border{
-  position:absolute;inset:-1px;border-radius:18px;
-  background:linear-gradient(180deg,rgba(220,38,38,.4),rgba(50,50,63,.2),rgba(250,204,21,.1));
-}
-.login-card{
-  position:relative;
-  background:rgba(10,10,15,.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-radius:18px;padding:32px;
-}
-.login-card::before{
-  content:'';position:absolute;top:0;left:32px;right:32px;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(220,38,38,.6),rgba(250,204,21,0.4),transparent);
-}
-/* Form elements */
-.login-flabel{
-  display:block;font-size:10px;font-weight:700;
-  color:#6B6B7A;text-transform:uppercase;letter-spacing:.2em;margin-bottom:10px;
-}
-.login-field{position:relative;margin-bottom:20px}
-.login-finput{
-  width:100%;height:52px;padding:0 16px;
-  background:rgba(14,14,22,.6);
-  border:2px solid rgba(50,50,63,.4);
-  border-radius:12px;color:#fff;font-size:16px;
-  outline:none;transition:all .3s cubic-bezier(0.25, 1, 0.5, 1);
-  font-family:'Inter',system-ui,sans-serif;
-  box-sizing:border-box;
-}
-.login-finput::placeholder{color:#3a3a4a}
-.login-finput:focus{
-  border-color:rgba(220,38,38,.7);
-  background:rgba(14,14,22,.9);
-  box-shadow:0 0 25px rgba(220,38,38,.15), inset 0 0 10px rgba(220,38,38,0.05);
-  transform: translateY(-1px);
-}
-.login-eye{
-  position:absolute;right:16px;top:50%;transform:translateY(-50%);
-  background:none;border:none;color:#4A4A5A;cursor:pointer;
-  display:flex;align-items:center;padding:0;transition:all .2s;
-}
-.login-eye:hover{color:#fff;transform: translateY(-50%) scale(1.1);}
-
-/* PREMIUM INTERACTION BUTTONS */
-.login-submit{
-  position:relative;width:100%;height:52px;margin-top:8px;
-  border:none;border-radius:12px;cursor:pointer;overflow:hidden;
-  background:linear-gradient(90deg,#DC2626,#e63946,#B91C1C);
-  background-size: 200% auto;
-  color:#fff;font-size:16px;font-weight:700;letter-spacing:.04em;
-  box-shadow:0 4px 20px rgba(220,38,38,.35);
-  transition:all .4s cubic-bezier(0.16, 1, 0.3, 1);font-family:'Inter',system-ui,sans-serif;
-  display:flex;align-items:center;justify-content:center;gap:10px;
-}
-.login-submit:hover:not(:disabled){
-  background-position: right center;
-  box-shadow:0 6px 30px rgba(220,38,38,.6), 0 0 15px rgba(250,204,21,0.2);
-  transform:scale(1.02) translateY(-2px);
-}
-.login-submit:active:not(:disabled){
-  transform:scale(.99) translateY(0);
-}
-.login-submit:disabled{opacity:.6;cursor:not-allowed}
-.login-submit-shine{
-  position:absolute;inset:0;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.3),transparent);
-  transform:translateX(-100%);transition:transform .6s;
-}
-.login-submit:hover .login-submit-shine{transform:translateX(100%)}
-.login-first{
-  text-align:center;margin-top:16px;
-  font-size:13px;color:#4A4A5A;
-}
-.login-first a{color:#FACC15;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;display:inline-block;}
-.login-first a:hover{color:#ffffff;text-shadow: 0 0 10px rgba(250,204,21,0.6);transform: scale(1.03);}
-/* Error/ok messages */
-.login-err{
-  background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.5);
-  color:#f87171;border-radius:8px;padding:10px 14px;font-size:12px;
-  margin-bottom:14px;display:none;animation:shake 0.4s ease-in-out;
-}
-.login-ok{
-  background:rgba(74,222,128,.15);border:1px solid rgba(74,222,128,.5);
-  color:#4ade80;border-radius:8px;padding:10px 14px;font-size:12px;
-  margin-bottom:14px;display:none;
-}
-.login-footer-txt{
-  position:absolute;bottom:20px;left:0;right:0;text-align:center;
-  font-size:11px;color:#4A4A5A;letter-spacing:.1em;
-  font-family:'Inter',system-ui,sans-serif;
-  opacity:0;transition:opacity 1s ease .8s;z-index:10;
-}
-.login-footer-txt.show{opacity:1}
-/* Signup extra fields */
-.login-extra{display:none}
-/* Logout bar */
-#logoutBar{
-  display:none;align-items:center;gap:8px;
-  padding:5px 14px;background:rgba(59,130,246,.08);
-  border-bottom:1px solid var(--b1);font-size:11px;color:var(--t3);
-}
-@keyframes pulse{0%,100%{opacity:.9;transform:scale(1)}50%{opacity:.5;transform:scale(1.03)}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes floatChev{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-6px); }
-  75% { transform: translateX(6px); }
-}
-
-/* ─── TOPO: dashboard com alertas da semana ─── */
-.topbar{
-  display:flex;align-items:center;gap:12px;
-  padding:8px 16px;background:var(--s1);border-bottom:1px solid var(--b1);
-  flex-shrink:0;height:46px;
-}
-.tb-stats{display:flex;gap:8px;flex:1}
-.tb-stat{
-  display:flex;align-items:center;gap:6px;
-  padding:4px 10px;border-radius:20px;border:1px solid var(--b1);
-  background:var(--s2);font-size:11px;font-weight:700;color:var(--t2);
-  cursor:pointer;transition:all .15s
-}
-.tb-stat:hover{background:var(--s3);color:var(--t1)}
-.tb-stat-num{font-size:13px;font-weight:800;color:var(--t1)}
-.tb-stat.r{border-color:#dc2626;background:rgba(220,38,38,.12);color:#f87171}
-.tb-stat.r .tb-stat-num{color:#f87171}
-.tb-stat.r:hover{background:rgba(220,38,38,.22)}
-.tb-stat.y{border-color:#d97706;background:rgba(217,119,6,.12);color:#fbbf24}
-.tb-stat.y .tb-stat-num{color:#fbbf24}
-.tb-stat.w{border-color:var(--ac);background:rgba(59,130,246,.12);color:var(--ac)}
-.tb-stat.w .tb-stat-num{color:var(--ac)}
-.tb-tools{display:flex;gap:6px;align-items:center}
-.tb-btn{
-  height:30px;padding:0 10px;border:1px solid var(--b1);border-radius:7px;
-  background:var(--s2);color:var(--t2);font-size:11px;font-weight:700;
-  cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:6px;
-  transition:all .12s
-}
-.tb-btn:hover{background:var(--s3);color:var(--t1);border-color:var(--b2)}
-
-/* SHELL tem header agora */
-.shell{display:flex;flex-direction:column;height:100vh;overflow:hidden}
-
-/* ─────────────────────────────────────────
-   SHELL: 3 colunas
-───────────────────────────────────────── */
-.app{display:grid;grid-template-columns:330px 1fr 300px;flex:1;overflow:hidden;min-height:0}
-
-/* ─────────────────────────────────────────
-   COLUNA 1 — FORMULÁRIO
-───────────────────────────────────────── */
-.fc{background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;height:100%;overflow:hidden;min-height:0}
-.logo{padding:10px 12px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:7px;flex-shrink:0;background:linear-gradient(135deg,var(--s1),var(--s2));flex-wrap:wrap}
-.logo-i{width:28px;height:28px;background:linear-gradient(135deg,var(--ac),var(--ac2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 8px rgba(59,130,246,.35)}
-.logo-t{font-size:13px;font-weight:700;color:var(--t1);letter-spacing:.01em}.logo-t b{color:var(--ac)}
-.fscroll{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
-.fscroll::-webkit-scrollbar{width:4px}.fscroll::-webkit-scrollbar-track{background:transparent}.fscroll::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
-
-.bloco{display:flex;flex-direction:column;gap:7px}
-.bloco-lbl{font-size:10px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.1em;display:flex;align-items:center;gap:6px}
-.num{width:17px;height:17px;border-radius:50%;background:var(--s3);border:1.5px solid var(--b1);color:var(--t3);font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
-.num.a{background:var(--ac);border-color:var(--ac);color:#fff;box-shadow:0 0 0 3px var(--glow)}
-.num.d{background:var(--G);border-color:var(--G);color:#fff}
-
-/* inputs */
-.iean{width:100%;height:50px;border:1.5px solid var(--b1);border-radius:var(--r);padding:0 42px 0 14px;font-size:16px;font-weight:700;font-family:monospace;background:var(--s2);color:var(--t1);outline:none;transition:all .15s;letter-spacing:.04em}
-.iean:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--glow);background:var(--s3)}
-.iean.ok{border-color:var(--G);background:var(--Gb)}
-.ew{position:relative}
-.scan-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);font-size:17px;cursor:pointer;padding:0}
-.scan-btn:hover{color:var(--t2)}
-
-/* nome encontrado */
-.nome-box{background:var(--Gb);border:1px solid var(--G);border-radius:var(--r);padding:8px 30px 8px 10px;font-size:12px;font-weight:700;color:var(--t1);line-height:1.3;word-break:break-word;display:none;position:relative}
-.nome-box.show{display:block}
-.nome-x{position:absolute;top:7px;right:7px;background:none;border:none;color:var(--t3);cursor:pointer;font-size:13px;line-height:1}
-.nome-x:hover{color:var(--R)}
-
-/* sugestões */
-.sug{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--s2);border:1px solid var(--b2);border-radius:var(--r);z-index:200;max-height:190px;overflow-y:auto;box-shadow:0 8px 28px rgba(0,0,0,.5)}
-
-/* cadastro rápido */
-.cad-box{display:none;flex-direction:column;gap:6px;background:var(--s2);border:1.5px solid var(--ac);border-radius:var(--r);padding:10px}
-.cad-box.show{display:flex}
-.cad-lbl{font-size:10px;font-weight:700;color:var(--ac);letter-spacing:.08em;text-transform:uppercase}
-.cad-input{width:100%;height:38px;border:1.5px solid var(--b1);border-radius:7px;padding:0 10px;font-size:13px;font-weight:600;font-family:inherit;background:var(--s3);color:var(--t1);outline:none}
-.cad-input:focus{border-color:var(--ac)}
-.cad-row{display:flex;gap:6px}
-.cad-ok{flex:1;height:32px;border:none;border-radius:7px;background:var(--ac);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
-.cad-ok:hover{opacity:.88}
-.cad-cl{height:32px;border:1px solid var(--b1);border-radius:7px;background:none;color:var(--t3);font-size:12px;padding:0 10px;cursor:pointer;font-family:inherit}
-.cad-cl:hover{color:var(--t1)}
-.sug-item{padding:8px 11px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--b1);display:flex;flex-direction:column;gap:2px}
-.sug-item:last-child{border-bottom:none}
-.sug-item:hover,.sug-item.foc{background:var(--s3)}
-.sug-item b{color:var(--ac)}
-.sug-ean{font-size:10px;color:var(--t3);font-family:monospace}
-
-/* val+qty */
-.ival{width:100%;height:52px;border:1.5px solid var(--b1);border-radius:var(--r);padding:0 12px;font-size:28px;font-weight:800;font-family:monospace;background:var(--s2);color:var(--t1);outline:none;letter-spacing:.08em;transition:border-color .15s}
-.ival:focus{border-color:var(--ac);box-shadow:0 0 0 3px var(--glow)}
-.ival.ok{border-color:var(--G);box-shadow:0 0 0 3px var(--Gb)}
-.ival.err{border-color:var(--R);box-shadow:0 0 0 3px var(--Rb)}
-.vfb{font-size:11px;font-weight:600;min-height:16px}
-.vfb.ok{color:#4ade80}.vfb.err{color:#f87171}.vfb.hi{color:var(--t3)}
-.exs{display:flex;gap:4px;flex-wrap:wrap}
-.ex{background:var(--s3);border:1px solid var(--b1);border-radius:5px;padding:2px 7px;font-size:10px;font-family:monospace;color:var(--t2);cursor:pointer;font-weight:600}
-.ex:hover{border-color:var(--ac);color:var(--ac)}
-
-/* qty */
-.qrow{display:flex;align-items:center;gap:8px}
-.qctrl{display:flex;align-items:center;border:1px solid var(--b1);border-radius:var(--r);overflow:hidden;background:var(--s2)}
-.qbtn{width:34px;height:34px;border:none;background:none;color:var(--t2);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.qbtn:hover{background:var(--s3);color:var(--t1)}
-.qnum{width:40px;height:34px;border:none;border-left:1px solid var(--b1);border-right:1px solid var(--b1);background:none;text-align:center;font-size:15px;font-weight:800;color:var(--t1);outline:none;font-family:inherit}
-.qpre{display:flex;gap:4px}
-.qp{width:28px;height:28px;border:1px solid var(--b1);border-radius:5px;background:var(--s3);color:var(--t2);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit}
-.qp:hover{border-color:var(--ac);color:var(--ac)}
-
-/* categorias */
-.cat-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.cat-btn{border:1px solid var(--b1);border-radius:7px;padding:7px 4px;font-size:10px;font-weight:700;text-align:center;cursor:pointer;color:var(--t3);background:var(--s2);font-family:inherit;transition:all .12s}
-.cat-btn:hover{color:var(--t2);border-color:var(--b2);background:var(--s3)}
-.cat-btn.on{background:var(--ac2);border-color:var(--ac);color:#fff;box-shadow:0 0 0 2px var(--glow)}
-
-/* salvar */
-.savbtn{width:100%;height:50px;border:none;border-radius:var(--r);background:var(--ac);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .2s;letter-spacing:.01em}
-.savbtn:hover:not(:disabled){opacity:.9;transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.3)}
-.savbtn:active:not(:disabled){transform:translateY(0)}
-.savbtn:disabled{background:var(--s3);color:var(--t3);cursor:not-allowed;box-shadow:none}
-.savbtn.rdy{background:linear-gradient(135deg,#16a34a,#15803d);box-shadow:0 2px 12px rgba(22,163,74,.4)}
-.kb{background:rgba(255,255,255,.18);border-radius:4px;padding:1px 7px;font-size:11px;font-family:monospace}
-
-/* ─────────────────────────────────────────
-   COLUNA 2 — PREVIEW
-───────────────────────────────────────── */
-.pc{background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;overflow:hidden;position:relative;min-width:0}
-.pc::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,var(--b1) 1px,transparent 1px);background-size:22px 22px;opacity:.35;pointer-events:none}
-.parea{position:relative;z-index:1;display:flex;flex-direction:column;align-items:stretch;gap:10px;width:min(860px,calc(100% - 32px))}
-.plbl{font-size:10px;font-weight:700;letter-spacing:.12em;color:var(--t3);text-transform:uppercase}
-
-/* pcard ocupa toda a largura disponível, mantém proporção */
-.pcard{
-  width:100%;
-  aspect-ratio:754/430;
-  background:transparent;border-radius:14px;
-  box-shadow:0 24px 64px rgba(0,0,0,.7),0 4px 16px rgba(0,0,0,.4);
-  overflow:hidden;
-  position:relative;
-  transition:box-shadow .25s
-}
-.pcard .etq{
-  position:absolute;
-  top:10px;left:10px;right:10px;bottom:10px;
-  width:auto;height:auto;
-  border-radius:10px
-}
-.pcard.live{box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 3px var(--ac)}
-.pcard.rdy{box-shadow:0 20px 60px rgba(0,0,0,.6),0 0 0 3px var(--G)}
-.pcard.tira-mode{aspect-ratio:766/354}
-.pcard.tira-mode .etq-tira{position:absolute;top:8px;left:8px;right:8px;bottom:8px;width:auto;height:auto}
-.pcard.empty{background:transparent;box-shadow:none}
-.pempty{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--t3);text-align:center}
-.pempty svg{opacity:.18}
-.pempty p{font-size:12px;line-height:1.8}
-
-.pacts{display:flex;gap:8px;width:100%}
-.pab{flex:1;height:38px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--b1);background:var(--s1);color:var(--t2);transition:all .15s}
-.pab:hover{background:var(--s2);color:var(--t1);border-color:var(--b2)}
-.pab.go{background:linear-gradient(135deg,#16a34a,#15803d);border-color:transparent;color:#fff;box-shadow:0 2px 10px rgba(22,163,74,.4)}
-.pab.go:hover{opacity:.9;box-shadow:0 4px 16px rgba(22,163,74,.5);transform:translateY(-1px)}
-
-/* ─────────────────────────────────────────
-   COLUNA 3 — LISTA
-───────────────────────────────────────── */
-.lc{background:var(--s1);border-right:1px solid var(--b1);display:flex;flex-direction:column;height:100%;overflow:hidden;min-height:0}
-.lh{padding:13px 12px 9px;border-bottom:1px solid var(--b1);flex-shrink:0;background:linear-gradient(to bottom,var(--s2),var(--s1))}
-.lt{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
-.ltit{font-size:12px;font-weight:800;letter-spacing:.04em}
-.lcnt{background:var(--ac2);color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:9px;margin-left:4px}
-.lbs{display:flex;gap:4px}
-.lbtn{height:26px;border:1px solid var(--b1);border-radius:6px;background:none;color:var(--t2);font-size:10px;font-weight:600;padding:0 8px;cursor:pointer;font-family:inherit;transition:all .12s}
-.lbtn:hover{background:var(--s2);color:var(--t1);border-color:var(--b2)}
-.lbtn.g{background:var(--Gb);border-color:var(--G);color:#4ade80;font-weight:700}
-.lbtn.g:hover{background:var(--G);color:#fff}
-.lsrch{width:100%;height:28px;border:1px solid var(--b1);border-radius:6px;padding:0 9px;font-size:11px;font-family:inherit;background:var(--s2);color:var(--t1);outline:none}
-.lsrch:focus{border-color:var(--ac)}
-.lscr{flex:1;overflow-y:auto;padding:7px;scrollbar-width:thin;scrollbar-color:var(--b2) transparent}
-.lscr::-webkit-scrollbar{width:4px}.lscr::-webkit-scrollbar-track{background:transparent}.lscr::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
-.lcard{border:1px solid var(--b1);border-radius:10px;overflow:hidden;margin-bottom:7px;cursor:pointer;background:var(--s2);transition:all .15s}
-.lcard:hover{border-color:var(--b2);background:var(--s3);transform:translateX(2px)}
-.lbar{height:5px;background-image:linear-gradient(to right,rgba(255,255,255,.15),transparent)}
-.lbody{padding:9px 10px 7px}
-.lrow{display:flex;align-items:flex-start;gap:6px;margin-bottom:4px}
-.lnome{flex:1;font-size:11px;font-weight:700;color:var(--t1);line-height:1.35;word-break:break-word}
-.lqty{background:var(--ac2);border-radius:5px;padding:1px 6px;font-size:9px;font-weight:800;color:#fff;flex-shrink:0}
-.lmeta{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
-.lval{font-size:10px;font-weight:600;color:var(--t2)}
-.lmodo{font-size:8px;font-weight:700;color:var(--t3);background:var(--s3);border:1px solid var(--b1);border-radius:3px;padding:1px 4px;letter-spacing:.04em}
-.pill{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:700;padding:2px 5px;border-radius:20px}
-.pr-pill{background:var(--Rb);color:#f87171}.py-pill{background:var(--Yb);color:#fbbf24}.pg-pill{background:var(--Gb);color:#4ade80}
-.pdot{width:4px;height:4px;border-radius:50%}
-.pr-pill .pdot{background:#f87171}.py-pill .pdot{background:#fbbf24}.pg-pill .pdot{background:#4ade80}
-.lfoot{display:flex;border-top:1px solid var(--b1)}
-.lfbtn{flex:1;border:none;border-right:1px solid var(--b1);background:none;color:var(--t3);font-size:10px;font-weight:600;padding:6px 2px;cursor:pointer;font-family:inherit;text-align:center;transition:all .12s}
-.lfbtn:last-child{border-right:none}
-.lfbtn:hover{background:var(--s3);color:var(--t1)}
-.lfbtn.imp{color:var(--t2)}.lfbtn.imp:hover{background:rgba(59,130,246,.12);color:var(--ac)}
-.lfbtn.del:hover{background:rgba(220,38,38,.1);color:#f87171}
-.lempty{text-align:center;padding:2rem 1rem;color:var(--t3);font-size:11px;line-height:1.9}
-
-/* ─────────────────────────────────────────
-   TOAST + MODAL
-───────────────────────────────────────── */
-.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);border-radius:28px;font-size:13px;font-weight:600;padding:10px 20px;opacity:0;transition:all .22s cubic-bezier(.34,1.56,.64,1);z-index:999;pointer-events:none;white-space:nowrap}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-.toast.s{background:var(--G);color:#fff}.toast.e{background:var(--R);color:#fff}.toast.i{background:var(--s3);color:var(--t1)}
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:center;justify-content:center}
-.ov.open{display:flex}
-.modal{background:var(--s1);border:1px solid var(--b2);border-radius:14px;padding:20px;width:340px}
-.modal h2{font-size:14px;font-weight:700;margin-bottom:14px}
-.mf{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.mf label{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.07em}
-.mf input,.mf select{width:100%;height:36px;border:1px solid var(--b1);border-radius:var(--r);padding:0 10px;font-size:13px;font-family:inherit;background:var(--s2);color:var(--t1);outline:none}
-.mf input:focus,.mf select:focus{border-color:var(--ac)}
-.mrow{display:flex;gap:8px;margin-top:12px}
-.msv{flex:1;background:var(--ac);border:none;border-radius:var(--r);color:#fff;font-size:13px;font-weight:700;padding:9px;cursor:pointer;font-family:inherit}
-.mcl{background:none;border:1px solid var(--b1);border-radius:var(--r);color:var(--t2);font-size:13px;padding:9px 12px;cursor:pointer;font-family:inherit}
-/* modal configuração */
-.cfg-modal{background:var(--s1);border:1px solid var(--b2);border-radius:14px;padding:20px;width:400px;max-height:90vh;overflow-y:auto}
-.cfg-modal h2{font-size:14px;font-weight:700;margin-bottom:4px}
-.cfg-sub{font-size:11px;color:var(--t3);margin-bottom:16px}
-.cfg-cat{margin-bottom:16px;border:1px solid var(--b1);border-radius:9px;overflow:hidden}
-.cfg-cat-hd{background:var(--s2);padding:8px 12px;font-size:11px;font-weight:800;color:var(--t2);letter-spacing:.08em;text-transform:uppercase}
-.cfg-cat-body{padding:10px 12px;display:flex;flex-direction:column;gap:8px}
-.cfg-row{display:flex;align-items:center;gap:8px}
-.cfg-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
-.cfg-dot-g{background:#1a8a3a}.cfg-dot-y{background:#e8a000}.cfg-dot-r{background:#c41c1c}
-.cfg-row label{flex:1;font-size:11px;font-weight:600;color:var(--t2)}
-.cfg-inp{width:60px;height:30px;border:1px solid var(--b1);border-radius:6px;padding:0 8px;font-size:13px;font-weight:700;font-family:monospace;background:var(--s2);color:var(--t1);outline:none;text-align:center}
-.cfg-inp:focus{border-color:var(--ac)}
-.cfg-unit{font-size:10px;color:var(--t3);flex-shrink:0}
-
-/* ─────────────────────────────────────────
-   ETIQUETA — layout idêntico ao PDF
-───────────────────────────────────────── */
-.etq{
-  width:100%;height:100%;
-  background:#fff;color:#111;
-  font-family:Arial,Helvetica,sans-serif;
-  border:3px solid #111;border-radius:12px;
-  display:flex;flex-direction:row;
-  overflow:hidden;box-sizing:border-box;
-  container-type:inline-size;
-  position:relative
-}
-.etq-ean{
-  position:absolute;bottom:3px;right:8px;
-  font-size:9px;font-family:'Courier New',monospace;
-  color:#aaa;letter-spacing:.05em;
-  z-index:8;pointer-events:none;
-  background:rgba(255,255,255,.85);padding:1px 4px;border-radius:3px;
-}
-.etq-left{
-  flex-shrink:0;width:28%;
-  border-right:2.5px solid #bbb;
-  background:#e4e4e4;
-  display:flex;flex-direction:column;
-  align-items:stretch;
-  padding:6px 6px;gap:5px
-}
-.etq-chk-row{
-  flex:1;min-height:0;
-  display:flex;flex-direction:column;
-  align-items:stretch;gap:2px
-}
-.etq-chk-par{
-  display:none
-}
-.etq-chk-box{
-  flex:1;min-height:0;border-radius:7px;
-  color:#fff;
-  position:relative;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:3px 4px;overflow:hidden;
-  container-type:size;
-}
-.fb-date{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  line-height:.92;letter-spacing:.01em;text-align:center;
-  font-family:Arial,Helvetica,sans-serif;
-  gap:2px;
-}
-.fb-mo, .fb-yr{
-  font-size:clamp(13px,28cqh,40px);
-  font-weight:900;line-height:1.02;
-  text-shadow:0 1px 2px rgba(0,0,0,.25);
-  display:block;
-}
-.fb-hint{
-  position:absolute;top:3px;right:5px;
-  font-size:clamp(7px,11cqh,11px);
-  font-weight:700;opacity:.78;
-  text-transform:lowercase;letter-spacing:.02em;
-  pointer-events:none;
-}
-.fb-pend{
-  font-size:clamp(11px,18cqh,22px);font-weight:800;opacity:.7;
-}
-</style>
+        .footer-text a:hover {
+            text-decoration: underline;
+        }
+    </style>
 </head>
 <body>
 
-<!-- TELA DE SELEÇÃO DE MÓDULOS -->
-<div id="telaModulos">
-  <div class="mod-header">
-    <div class="mod-header-info">
-      <span>Bem-vindo ao ecossistema</span>
-      <strong>ULTRA STOCK</strong>
-    </div>
-    <button class="tb-btn" onclick="deslogar()" style="height:34px;padding:0 14px;border-radius:10px">Sair</button>
-  </div>
-  <div class="mod-grid">
-    <div class="mod-card" onclick="entrarNoModulo('etiqbox')">
-      <span class="mod-badge ativo">Disponível</span>
-      <div class="mod-icon">🏷️</div>
-      <div class="mod-name">Ultra EtiqBox</div>
-      <div class="mod-desc">Sistema profissional de rotulagem e controle de validade semafórico.</div>
-    </div>
-    <div class="mod-card mod-locked">
-      <span class="mod-badge breve">Breve</span>
-      <div class="mod-icon">📦</div>
-      <div class="mod-name">Ultra Inventory</div>
-      <div class="mod-desc">Controle completo de estoque, entradas, saídas e inventário geral.</div>
-    </div>
-    <div class="mod-card mod-locked">
-      <span class="mod-badge breve">Breve</span>
-      <div class="mod-icon">📊</div>
-      <div class="mod-name">Ultra Analytics</div>
-      <div class="mod-desc">Painéis gerenciais, relatórios de perdas e previsão de demanda.</div>
-    </div>
-  </div>
-  <div class="mod-footer">Ultra Stock Premium Ecosystem © 2026</div>
-</div>
-
-<!-- TELA DE LOGIN PREMIUM UPGRADED -->
-<div id="telaLogin">
-  <!-- Camada Traseira Avançada de Desfoques Metamórficos -->
-  <div class="premium-bg-blur">
-    <div class="blur-orb blur-orb-1"></div>
-    <div class="blur-orb blur-orb-2"></div>
-    <div class="blur-orb blur-orb-3"></div>
-  </div>
-
-  <canvas id="loginCanvas"></canvas>
-  <div class="login-vignette"></div>
-  
-  <div class="login-content">
-    <div class="login-chevron-wrap">
-      <div class="login-chevron-glow"></div>
-      <div class="login-chevron-ring1"></div>
-      <div class="login-chevron-ring2"></div>
-      <div class="login-chevrons">
-        <svg width="24" height="14" viewBox="0 0 24 14" fill="none"><path d="M2 12L12 2L22 12" stroke="#DC2626" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <svg width="24" height="14" viewBox="0 0 24 14" fill="none"><path d="M2 12L12 2L22 12" stroke="#DC2626" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/></svg>
-        <svg width="24" height="14" viewBox="0 0 24 14" fill="none"><path d="M2 12L12 2L22 12" stroke="#FACC15" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"/></svg>
-      </div>
-    </div>
-    
-    <div class="login-brand">
-      <div class="login-brand-glow"></div>
-      <h1>
-        <span class="login-brand-ultra">ULTRA</span>
-        <span class="login-brand-stock">STOCK</span>
-      </h1>
-      <div class="login-brand-line"></div>
-    </div>
-    
-    <div class="login-tagline">
-      <p>Ecosystem <span>Premium</span></p>
-      <small>Gestão Inteligente de Validades</small>
-    </div>
-    
-    <div class="login-card-wrap">
-      <div class="login-card-border"></div>
-      <div class="login-card">
-        <div class="login-err" id="loginErr">Erro</div>
-        <div class="login-ok" id="loginOk">Sucesso</div>
+    <!-- Container do Login -->
+    <div class="login-card">
+        <h2>Área de Acesso</h2>
         
-        <form id="loginForm" onsubmit="handleLogin(event)">
-          <div class="login-extra">
-            <label class="login-flabel">Nome Completo</label>
-            <div class="login-field">
-              <input type="text" class="login-finput" id="loginNome" placeholder="Seu nome">
+        <form action="#">
+            <div class="input-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" placeholder="Seu e-mail" required>
             </div>
-          </div>
-          
-          <label class="login-flabel">Endereço de E-mail</label>
-          <div class="login-field">
-            <input type="email" class="login-finput" id="loginEmail" placeholder="nome@empresa.com" required>
-          </div>
-          
-          <label class="login-flabel">Senha de Acesso</label>
-          <div class="login-field">
-            <input type="password" class="login-finput" id="loginPass" placeholder="••••••••" required>
-            <button type="button" class="login-eye" onclick="toggleLoginPass()">
-              <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            </button>
-          </div>
-          
-          <button type="submit" class="login-submit" id="loginBtn">
-            <span class="login-submit-shine"></span>
-            <span id="loginBtnTxt">Entrar no Ecossistema</span>
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
-          </button>
+            
+            <div class="input-group">
+                <label for="password">Senha</label>
+                <input type="password" id="password" placeholder="Sua senha" required>
+            </div>
+            
+            <button type="submit" class="btn-login">Entrar</button>
         </form>
-        
-        <div class="login-first">
-          <span id="loginSwitchTxt">Primeira vez aqui?</span> 
-          <a id="loginSwitchBtn" onclick="toggleSignupMode()">Criar uma conta</a>
+
+        <!-- Texto corrigido e espaçado aqui -->
+        <div class="footer-text">
+            <span>Ainda não tem uma conta?</span>
+            <a href="#">Criar conta</a>
         </div>
-      </div>
     </div>
-  </div>
-  
-  <div class="login-footer-txt">ULTRA STOCK SECURITY PLATFORM V3.5</div>
-</div>
 
-<!-- [O restante da marcação HTML da aplicação principal permanece intocada abaixo para preservar a lógica interna] -->
-<div class="shell" id="appShell" style="display:none">
-  <!-- Topbar -->
-  <div class="topbar">
-    <div class="tb-stats">
-      <div class="tb-stat r" onclick="filtrarListaRapido('critico')">
-        <span>Crítico:</span> <span class="tb-stat-num" id="statCritico">0</span>
-      </div>
-      <div class="tb-stat y" onclick="filtrarListaRapido('atencao')">
-        <span>Atenção:</span> <span class="tb-stat-num" id="statAtencao">0</span>
-      </div>
-      <div class="tb-stat w" onclick="filtrarListaRapido('todos')">
-        <span>Total:</span> <span class="tb-stat-num" id="statTotal">0</span>
-      </div>
-    </div>
-    <div class="tb-tools">
-      <span id="userDisplay" style="font-size:12px;color:var(--t2);font-weight:600;margin-right:4px"></span>
-      <button class="tb-btn" onclick="abrirConfiguracoes()">⚙️ Configurações</button>
-      <button class="tb-btn" onclick="voltarParaModulos()">📱 Módulos</button>
-    </div>
-  </div>
-  
-  <div id="logoutBar">Sessão Ativa</div>
-  
-  <div class="app">
-    <div class="fc">
-      <div class="logo">
-        <div class="logo-i">📦</div>
-        <div class="logo-t">Ultra <b>EtiqBox</b></div>
-      </div>
-      <div class="fscroll">
-        <div class="bloco">
-          <label class="bloco-lbl"><span class="num a" id="n1">1</span> Código de Barras (EAN)</label>
-          <div class="ew">
-            <input type="text" class="iean" id="f_ean" placeholder="Insira ou escanear..." autocomplete="off">
-            <button class="scan-btn" onclick="focarEan()">🔍</button>
-            <div class="sug" id="sugBox" style="display:none"></div>
-          </div>
-          <div class="nome-box" id="nomeBox">
-            <span id="nomeBoxTxt"></span>
-            <button class="nome-x" onclick="limparProduto()">×</button>
-          </div>
-          <div class="cad-box" id="cadBox">
-            <span class="cad-lbl">Novo Produto Encontrado</span>
-            <input type="text" class="cad-input" id="cad_nome" placeholder="Descrição do Item Premium">
-            <div class="cad-row">
-              <button class="cad-ok" onclick="salvarNovoProduto()">Cadastrar</button>
-              <button class="cad-cl" onclick="fecharCadastroRapido()">Ignorar</button>
-            </div>
-          </div>
-        </div>
-        <!-- Bloco 2: Validade -->
-        <div class="bloco">
-          <label class="bloco-lbl"><span class="num" id="n2">2</span> Data de Vencimento</label>
-          <input type="text" class="ival" id="f_val" placeholder="DDMMAA" maxlength="6" autocomplete="off">
-          <div class="vfb" id="vfb"></div>
-          <div class="exs" id="exs"></div>
-        </div>
-        <!-- Bloco 3: Qtd -->
-        <div class="bloco">
-          <label class="bloco-lbl"><span class="num" id="n3">3</span> Quantidade de Etiquetas</label>
-          <div class="qrow">
-            <div class="qctrl">
-              <button class="qbtn" onclick="addQtd(-1)">-</button>
-              <input type="text" class="qnum" id="f_qty" value="1">
-              <button class="qbtn" onclick="addQtd(1)">+</button>
-            </div>
-            <div class="qpre">
-              <button class="qp" onclick="setQtd(5)">5</button>
-              <button class="qp" onclick="setQtd(10)">10</button>
-              <button class="qp" onclick="setQtd(20)">20</button>
-            </div>
-          </div>
-        </div>
-        <!-- Bloco 4: Modo -->
-        <div class="bloco">
-          <label class="bloco-lbl">Estilo da Etiqueta</label>
-          <div class="cat-grid">
-            <button class="cat-btn on" id="m_gondola" onclick="setModo('gondola')">PADRÃO GÔNDOLA</button>
-            <button class="cat-btn" id="m_tira" onclick="setModo('tira')">TIRA VERTICAL</button>
-          </div>
-        </div>
-        <button class="savbtn" id="btnSalvar" disabled onclick="acaoSalvar()">
-          <span>Adicionar à Lista</span> <span class="kb">Enter</span>
-        </button>
-      </div>
-    </div>
-    
-    <!-- Coluna Central: Preview Realtime -->
-    <div class="pc">
-      <div class="parea">
-        <label class="plbl">Visualização Premium (Tempo Real)</label>
-        <div class="pcard empty" id="pcard">
-          <div class="pempty">
-            <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10m-8 5h6" opacity="0.3"/><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="4 4"/></svg>
-            <p>Aguardando dados de entrada para gerar a etiqueta...</p>
-          </div>
-        </div>
-        <div class="pacts">
-          <button class="pab" onclick="limparFormulario()">Limpar Campos</button>
-          <button class="pab go" id="btnImprimirTudo" onclick="imprimirListaCompleta()">Imprimir Lista (0)</button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Coluna Direita: Lista de Lotes Preparados -->
-    <div class="lc">
-      <div class="lh">
-        <div class="lt">
-          <span class="ltit">FILA DE IMPRESSÃO <span class="lcnt" id="lcnt">0</span></span>
-          <div class="lbs">
-            <button class="lbtn g" onclick="imprimirListaCompleta()">Imprimir Tudo</button>
-            <button class="lbtn" onclick="limparFilaToda()" style="color:var(--R)">Limpar</button>
-          </div>
-        </div>
-        <input type="text" class="lsrch" id="l_srch" placeholder="Filtrar fila atual..." oninput="renderFila()">
-      </div>
-      <div class="lscr" id="lscr"></div>
-    </div>
-  </div>
-</div>
+    /* --- SCRIPT PARA GERAR AS FAÍSCAS ALEATÓRIAS --- */
+    <script>
+        function createSparks() {
+            const count = 40; // Quantidade de faíscas na tela
+            const body = document.body;
 
-<!-- Modais do Ecossistema -->
-<div class="ov" id="ovCfg" onclick="fecharModais(event)">
-  <div class="cfg-modal">
-    <h2>Parâmetros do Semáforo</h2>
-    <div class="cfg-sub">Configure os dias de antecedência para as cores da sua operação de validade.</div>
-    <div class="cfg-cat">
-      <div class="cfg-cat-hd">Zonas Semafóricas (Dias Correntes)</div>
-      <div class="cfg-cat-body">
-        <div class="cfg-row">
-          <div class="cfg-dot cfg-dot-g"></div>
-          <label>Farol Verde (Vencimento Longo):</label>
-          <span class="cfg-unit">Acima de</span>
-          <input type="text" class="cfg-inp" id="cfg_g">
-          <span class="cfg-unit">dias</span>
-        </div>
-        <div class="cfg-row">
-          <div class="cfg-dot cfg-dot-y"></div>
-          <label>Farol Amarelo (Atenção Intermediária):</label>
-          <span class="cfg-unit">Até</span>
-          <input type="text" class="cfg-inp" id="cfg_y">
-          <span class="cfg-unit">dias</span>
-        </div>
-        <div class="cfg-row">
-          <div class="cfg-dot cfg-dot-r"></div>
-          <label>Farol Vermelho (Crítico / Retirada):</label>
-          <span class="cfg-unit">Menos de</span>
-          <input type="text" class="cfg-inp" id="cfg_r">
-          <span class="cfg-unit">dias</span>
-        </div>
-      </div>
-    </div>
-    <div class="mrow">
-      <button class="msv" onclick="salvarConfiguracoes()">Salvar Parâmetros</button>
-      <button class="mcl" onclick="fecharModais(null)">Voltar</button>
-    </div>
-  </div>
-</div>
+            for (let i = 0; i < count; i++) {
+                let spark = document.createElement('div');
+                spark.classList.add('spark');
+                
+                // Posições e atrasos aleatórios para parecer natural
+                spark.style.left = Math.random() * 100 + 'vw';
+                spark.style.animationDelay = Math.random() * 5 + 's';
+                spark.style.animationDuration = (Math.random() * 4 + 4) + 's'; // Entre 4 e 8 segundos
+                
+                // Cores levemente diferentes (ouro, branco, amarelo)
+                const colors = ['#ffdf00', '#ffffff', '#ffb700'];
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                spark.style.boxShadow = `0 0 8px ${randomColor}, 0 0 15px #fff`;
 
-<div class="toast" id="toast">Notificação</div>
-
-<!-- LÓGICA E SCRIPTS INTERNOS -->
-<script>
-// Sistema global de configuração semafórica local
-let CONFIG_DIAS = JSON.parse(localStorage.getItem('ue_cfg_dias') || '{"g":45,"y":30,"r":15}');
-
-// Estado Interno da Aplicação
-let produtosDB = [];
-let filaImpressao = [];
-let produtoSelecionado = null;
-let modoLayout = 'gondola'; // gondola ou tira
-let editandoId = null;
-let filtroRapido = 'todos';
-
-// Inicializador de Fluxo Premium
-window.addEventListener('DOMContentLoaded', async () => {
-  configurarLayoutInicial();
-  if(!sessao) {
-    mostrarTela('telaLogin');
-    dispararAnimacaoEntradaLogin();
-  } else {
-    mostrarTela('telaModulos');
-    await carregarBancoProdutos();
-  }
-});
-
-function configurarLayoutInicial() {
-  const c = document.getElementById('loginCanvas');
-  const ctx = c.getContext('2d');
-  let w = c.width = 600; let h = c.height = 600;
-  let pts = [];
-  for(let i=0;i<45;i++){
-    pts.push({
-      x: Math.random()*w, y: Math.random()*h,
-      r: Math.random()*2+1, d: Math.random()*0.4+0.1,
-      a: Math.random()*Math.PI*2
-    });
-  }
-  function draw(){
-    ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = 'rgba(220,38,38,0.3)';
-    for(let i=0;i<pts.length;i++){
-      let p = pts[i];
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
-      ctx.fill();
-      p.x += Math.cos(p.a)*p.d; p.y += Math.sin(p.a)*p.d;
-      if(p.x<0||p.x>w||p.y<0||p.y>h){
-        p.x = Math.random()*w; p.y = Math.random()*h;
-      }
-    }
-    requestAnimationFrame(draw);
-  }
-  draw();
-}
-
-function dispararAnimacaoEntradaLogin(){
-  setTimeout(()=>document.querySelector('.login-brand-ultra').classList.add('show'),150);
-  setTimeout(()=>document.querySelector('.login-brand-stock').classList.add('show'),300);
-  setTimeout(()=>document.querySelector('.login-brand-line').classList.add('show'),550);
-  setTimeout(()=>document.querySelector('.login-tagline').classList.add('show'),700);
-  setTimeout(()=>document.querySelector('.login-card-wrap').classList.add('show'),850);
-  setTimeout(()=>document.querySelector('.login-footer-txt').classList.add('show'),1050);
-}
-
-// Chaveador de Cadastro vs Login
-let isSignup = false;
-function toggleSignupMode(){
-  isSignup = !isSignup;
-  const extra = document.querySelector('.login-extra');
-  const titleUltra = document.querySelector('.login-brand-ultra');
-  const titleStock = document.querySelector('.login-brand-stock');
-  const btnTxt = document.getElementById('loginBtnTxt');
-  const switchTxt = document.getElementById('loginSwitchTxt');
-  const switchBtn = document.getElementById('loginSwitchBtn');
-  
-  if(isSignup){
-    extra.style.display = 'block';
-    titleUltra.textContent = "REGISTRAR";
-    titleStock.textContent = "CONTA";
-    btnTxt.textContent = "Criar Minha Conta Premium";
-    switchTxt.textContent = "Já possui uma licença?";
-    switchBtn.textContent = "Fazer Login";
-  } else {
-    extra.style.display = 'none';
-    titleUltra.textContent = "ULTRA";
-    titleStock.textContent = "STOCK";
-    btnTxt.textContent = "Entrar no Ecossistema";
-    switchTxt.textContent = "Primeira vez aqui?";
-    switchBtn.textContent = "Criar uma conta";
-  }
-}
-
-function toggleLoginPass(){
-  const input = document.getElementById('loginPass');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
-
-// Manipulador de Sessão do Supabase
-async function handleLogin(e){
-  e.preventDefault();
-  const email = document.getElementById('loginEmail').value.trim();
-  const pass = document.getElementById('loginPass').value;
-  const btn = document.getElementById('loginBtn');
-  const errBox = document.getElementById('loginErr');
-  const okBox = document.getElementById('loginOk');
-  
-  errBox.style.display='none'; okBox.style.display='none';
-  btn.disabled = true;
-  
-  if(isSignup) {
-    const nome = document.getElementById('loginNome').value.trim();
-    if(!nome){
-      showMsg('loginErr','Por favor, insira o seu nome.'); btn.disabled=false; return;
-    }
-    // Criação de conta via RPC ou metadados anonimizados nativos
-    const r = await sbFetch('/auth/v1/signup', 'POST', {email, password:pass, options:{data:{full_name:nome}}});
-    if(!r.ok) {
-      showMsg('loginErr', r.data?.msg || r.data?.error_description || 'Erro ao criar conta.');
-      btn.disabled = false;
-    } else {
-      showMsg('loginOk', 'Conta criada! Confirme seu e-mail se necessário ou faça login.');
-      isSignup = false; toggleSignupMode(); btn.disabled = false;
-    }
-  } else {
-    const r = await sbFetch('/auth/v1/token?grant_type=password', 'POST', {email, password:pass});
-    if(!r.ok){
-      showMsg('loginErr', 'Credenciais inválidas ou erro de rede.');
-      btn.disabled = false;
-    } else {
-      salvarSessao(r.data);
-      showMsg('loginOk', 'Acesso autorizado. Carregando ecossistema...');
-      setTimeout(async () => {
-        document.getElementById('telaLogin').style.display = 'none';
-        mostrarTela('telaModulos');
-        await carregarBancoProdutos();
-      }, 1000);
-    }
-  }
-}
-
-function showMsg(id, t){ const el=document.getElementById(id); el.textContent=t; el.style.display='block'; }
-
-function deslogar(){
-  limparSessao();
-  document.getElementById('telaModulos').style.display='none';
-  document.getElementById('appShell').style.display='none';
-  const fields = ['loginEmail','loginPass','loginNome'];
-  fields.forEach(f=> { if(document.getElementById(f)) document.getElementById(f).value=''; });
-  document.getElementById('loginBtn').disabled = false;
-  document.getElementById('loginErr').style.display='none';
-  document.getElementById('loginOk').style.display='none';
-  mostrarTela('telaLogin');
-  dispararAnimacaoEntradaLogin();
-}
-
-function mostrarTela(id){ document.getElementById(id).style.display='flex'; }
-function entrarNoModulo(m){
-  if(m==='etiqbox'){
-    document.getElementById('telaModulos').style.display='none';
-    document.getElementById('appShell').style.display='flex';
-    document.getElementById('userDisplay').textContent = sessao?.user?.email || 'Operador Premium';
-    focarEan();
-    renderFila();
-  }
-}
-function voltarParaModulos(){
-  document.getElementById('appShell').style.display='none';
-  mostrarTela('telaModulos');
-}
-
-// Carregamento de Produtos da Infraestrutura
-async function carregarBancoProdutos(){
-  const res = await sbFetch('/rest/v1/produtos?select=*');
-  if(res.ok && Array.isArray(res.data)){
-    produtosDB = res.data;
-  }
-}
-
-// Componentes Dinâmicos da Fila e Regras de Negócio do Semáforo
-function addQtd(v){
-  const inp = document.getElementById('f_qty');
-  let c = parseInt(inp.value)||1;
-  c += v; if(c<1) c=1; inp.value = c;
-}
-function setQtd(v){ document.getElementById('f_qty').value = v; }
-function setModo(m){
-  modoLayout = m;
-  document.getElementById('m_gondola').classList.toggle('on', m==='gondola');
-  document.getElementById('m_tira').classList.toggle('on', m==='tira');
-  atualizarPreviewRealtime();
-}
-
-// Monitoramento dos Inputs inline
-document.getElementById('f_ean').addEventListener('input', function(e){
-  const v = e.target.value.trim();
-  fecharCadastroRapido();
-  if(v.length >= 3){
-    const filtrados = produtosDB.filter(p => p.ean.includes(v) || p.nome.toLowerCase().includes(v.toLowerCase())).slice(0, 5);
-    renderSugestoes(filtrados);
-  } else {
-    document.getElementById('sugBox').style.display = 'none';
-  }
-});
-
-document.getElementById('f_ean').addEventListener('keydown', function(e){
-  if(e.key === 'Enter'){
-    e.preventDefault();
-    const items = document.querySelectorAll('.sug-item');
-    if(items.length > 0){
-      selecionarProduto(produtosDB.find(p => p.id == items[0].dataset.id));
-    } else if(this.value.trim().length >= 1) {
-      document.getElementById('cadBox').classList.add('show');
-      document.getElementById('cad_nome').value = '';
-      document.getElementById('cad_nome').focus();
-    }
-  }
-});
-
-function renderSugestoes(arr){
-  const box = document.getElementById('sugBox');
-  if(arr.length === 0){ box.style.display='none'; return; }
-  box.innerHTML = arr.map(p => `
-    <div class="sug-item" data-id="${p.id}" onclick="clickSug(${p.id})">
-      <b>${p.nome}</b>
-      <span class="sug-ean">${p.ean}</span>
-    </div>
-  `).join('');
-  box.style.display = 'block';
-}
-
-function clickSug(id){
-  const p = produtosDB.find(x => x.id == id);
-  if(p) selecionarProduto(p);
-}
-
-function selecionarProduto(p){
-  produtoSelecionado = p;
-  document.getElementById('f_ean').value = p.ean;
-  document.getElementById('f_ean').classList.add('ok');
-  document.getElementById('nomeBoxTxt').textContent = p.nome;
-  document.getElementById('nomeBox').classList.add('show');
-  document.getElementById('sugBox').style.display = 'none';
-  document.getElementById('n1').className = "num d";
-  document.getElementById('f_val').focus();
-  validarFormularioCompleto();
-}
-
-function limparProduto(){
-  produtoSelecionado = null;
-  document.getElementById('f_ean').value = '';
-  document.getElementById('f_ean').className = 'iean';
-  document.getElementById('nomeBox').classList.remove('show');
-  document.getElementById('n1').className = "num a";
-  fecharCadastroRapido();
-  validarFormularioCompleto();
-}
-
-function fecharCadastroRapido(){ document.getElementById('cadBox').classList.remove('show'); }
-
-async function salvarNovoProduto(){
-  const ean = document.getElementById('f_ean').value.trim();
-  const nome = document.getElementById('cad_nome').value.trim().toUpperCase();
-  if(!nome) return;
-  const res = await sbFetch('/rest/v1/produtos', 'POST', {ean, nome});
-  if(res.ok && res.data && res.data[0]){
-    produtosDB.push(res.data[0]);
-    selecionarProduto(res.data[0]);
-    toast('s', 'Produto registrado e selecionado!');
-  } else {
-    // Fallback offline estruturado se tabela mock não possuir triggers
-    const mockProd = {id: Date.now(), ean, nome};
-    produtosDB.push(mockProd);
-    selecionarProduto(mockProd);
-  }
-}
-
-// Processador Máscara e Semáforo Visual de Datas
-document.getElementById('f_val').addEventListener('input', function(e){
-  let v = e.target.value.replace(/\D/g,'');
-  if(v.length > 6) v = v.slice(0,6);
-  e.target.value = v;
-  
-  const vfb = document.getElementById('f_val');
-  const info = document.getElementById('vfb');
-  
-  if(v.length === 6){
-    const d = parseInt(v.slice(0,2));
-    const m = parseInt(v.slice(2,4)) - 1;
-    let a = parseInt(v.slice(4,6));
-    a += 2000;
-    
-    const dataTest = new Date(a, m, d);
-    if(dataTest.getDate()===d && dataTest.getMonth()===m && dataTest.getFullYear()===a){
-      vfb.className = "ival ok";
-      const diasRestantes = Math.ceil((dataTest - new Date().setHours(0,0,0,0)) / (1000*60*60*24));
-      
-      if(diasRestantes < 0){
-        info.className = "vfb err"; info.textContent = `Vencido há ${Math.abs(diasRestantes)} dias!`;
-      } else {
-        info.className = "vfb ok"; info.textContent = `Vence em ${diasRestantes} dias.`;
-      }
-      document.getElementById('n2').className = "num d";
-    } else {
-      vfb.className = "ival err"; info.className = "vfb err"; info.textContent = "Data Calendário Inválida";
-      document.getElementById('n2').className = "num a";
-    }
-  } else {
-    vfb.className = "ival"; info.className = "vfb hi"; info.textContent = "Formato DDMMAA";
-    document.getElementById('n2').className = "num a";
-  }
-  validarFormularioCompleto();
-});
-
-document.getElementById('f_val').addEventListener('keydown', function(e){
-  if(e.key === 'Enter' && !document.getElementById('btnSalvar').disabled){
-    acaoSalvar();
-  }
-});
-
-function validarFormularioCompleto(){
-  const eanOk = produtoSelecionado != null;
-  const valOk = document.getElementById('f_val').value.length === 6 && document.getElementById('f_val').classList.contains('ok');
-  const btn = document.getElementById('btnSalvar');
-  
-  if(eanOk && valOk){
-    btn.disabled = false; btn.classList.add('rdy');
-  } else {
-    btn.disabled = true; btn.classList.remove('rdy');
-  }
-  atualizarPreviewRealtime();
-}
-
-function acaoSalvar(){
-  const valRaw = document.getElementById('f_val').value;
-  const qty = parseInt(document.getElementById('f_qty').value)||1;
-  
-  const d = valRaw.slice(0,2);
-  const m = valRaw.slice(2,4);
-  const a = valRaw.slice(4,6);
-  
-  if(editandoId){
-    filaImpressao = filaImpressao.map(item => item.id === editandoId ? {...item, produto: produtoSelecionado, dia:d, mes:m, ano:a, quantidade:qty, modo:modoLayout} : item);
-    toast('s', 'Etiqueta atualizada na fila.');
-    editandoId = null;
-    document.getElementById('btnSalvar').textContent = "Adicionar à Lista";
-  } else {
-    filaImpressao.push({
-      id: Date.now(),
-      produto: produtoSelecionado,
-      dia: d, mes: m, ano: a,
-      quantidade: qty,
-      modo: modoLayout
-    });
-    toast('s', 'Etiqueta inserida com sucesso.');
-  }
-  
-  limparFormulario();
-  renderFila();
-  focarEan();
-}
-
-function limparFormulario(){
-  limparProduto();
-  document.getElementById('f_val').value = '';
-  document.getElementById('f_val').className = 'ival';
-  document.getElementById('vfb').className = 'vfb hi';
-  document.getElementById('vfb').textContent = '';
-  document.getElementById('f_qty').value = '1';
-  document.getElementById('n2').className = "num";
-  editandoId = null;
-  document.getElementById('btnSalvar').innerHTML = '<span>Adicionar à Lista</span> <span class="kb">Enter</span>';
-  validarFormularioCompleto();
-}
-
-// Gerador Realtime do Layout de Etiquetas Espelhadas
-function atualizarPreviewRealtime(){
-  const wrap = document.getElementById('pcard');
-  const valRaw = document.getElementById('f_val').value;
-  
-  const eanOk = produtoSelecionado != null;
-  const valOk = valRaw.length === 6 && document.getElementById('f_val').classList.contains('ok');
-  
-  if(!eanOk || !valOk){
-    wrap.className = "pcard empty";
-    wrap.innerHTML = `
-      <div class="pempty">
-        <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10M7 12h10m-8 5h6" opacity="0.3"/><rect x="4" y="4" width="16" height="16" rx="2" stroke-dasharray="4 4"/></svg>
-        <p>Aguardando dados de entrada para gerar a etiqueta...</p>
-      </div>`;
-    return;
-  }
-  
-  const d = valRaw.slice(0,2); const m = valRaw.slice(2,4); const a = valRaw.slice(4,6);
-  const htmlEtq = construirHtmlEtiqueta(modoLayout, produtoSelecionado.nome, produtoSelecionado.ean, d, m, a);
-  
-  wrap.className = modoLayout === 'tira' ? "pcard live tira-mode" : "pcard live";
-  wrap.innerHTML = htmlEtq;
-}
-
-function construirHtmlEtiqueta(modo, nome, ean, dia, mes, ano){
-  const targetDate = new Date(parseInt('20'+ano), parseInt(mes)-1, parseInt(dia));
-  const hoje = new Date().setHours(0,0,0,0);
-  const dias = Math.ceil((targetDate - hoje) / (1000*60*60*24));
-  
-  let corZ1="#ccc", corZ2="#ccc", corZ3="#ccc";
-  let txtZ1="", txtZ2="", txtZ3="";
-  let p1="", p2="", p3="";
-  
-  if(dias > CONFIG_DIAS.g) { corZ1="#16a34a"; txtZ1=`<div class="fb-date"><span class="fb-mo">${mes}</span><span class="fb-yr">${ano}</span></div>`; }
-  else if(dias > CONFIG_DIAS.r) { corZ2="#d97706"; txtZ2=`<div class="fb-date"><span class="fb-mo">${mes}</span><span class="fb-yr">${ano}</span></div>`; }
-  else { corZ3="#dc2626"; txtZ3=`<div class="fb-date"><span class="fb-mo">${mes}</span><span class="fb-yr">${ano}</span></div>`; }
-  
-  if(dias <= CONFIG_DIAS.g) p1='<div class="fb-xmark"></div>';
-  if(dias <= CONFIG_DIAS.r || dias > CONFIG_DIAS.g) p2='<div class="fb-xmark"></div>';
-  if(dias > CONFIG_DIAS.r) p3='<div class="fb-xmark"></div>';
-
-  if(modo === 'tira'){
-    return `
-      <div class="etq-tira" style="width:100%;height:100%;background:#fff;color:#111;border:3px solid #111;box-sizing:border-box;display:flex;flex-direction:column;font-family:Arial,sans-serif;padding:6px;position:relative">
-        <div style="font-size:14px;font-weight:900;text-align:center;border-bottom:2px solid #111;padding-bottom:3px;text-transform:uppercase;word-break:break-word">${nome}</div>
-        <div style="flex:1;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px">
-          <div style="width:55px;height:55px;border-radius:6px;background:${dias>CONFIG_DIAS.g?'#16a34a':dias>CONFIG_DIAS.r?'#d97706':'#dc2626'};color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1">
-            <span style="font-size:22px;font-weight:900">${dia}</span>
-            <span style="font-size:12px;font-weight:700">${mes}/${ano}</span>
-          </div>
-          <div style="flex:1;font-size:11px;font-weight:700;line-height:1.3;color:#333">
-            Lote Controlado Semáforo<br>
-            Status: <b>${dias<0?'Vencido':dias<=CONFIG_DIAS.r?'Crítico / Retirada':dias<=CONFIG_DIAS.g?'Atenção Gôndola':'Seguro'}</b>
-          </div>
-        </div>
-        <div style="position:absolute;bottom:4px;right:6px;font-size:8px;font-family:monospace;color:#777">${ean}</div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="etq">
-      <div class="etq-left">
-        <div class="etq-chk-row">
-          <div class="etq-chk-box" style="background:${corZ1}">
-            <span class="fb-hint">Verde</span>
-            ${txtZ1} ${p1}
-          </div>
-        </div>
-        <div class="etq-chk-row">
-          <div class="etq-chk-box" style="background:${corZ2}">
-            <span class="fb-hint">Amarelo</span>
-            ${txtZ2} ${p2}
-          </div>
-        </div>
-        <div class="etq-chk-row">
-          <div class="etq-chk-box" style="background:${corZ3}">
-            <span class="fb-hint">Vermelho</span>
-            ${txtZ3} ${p3}
-          </div>
-        </div>
-      </div>
-      <div style="flex:1;padding:12px;display:flex;flex-direction:column;justify-content:space-between;min-width:0;background:#fff">
-        <div>
-          <div style="font-size:11px;font-weight:900;color:#DC2626;letter-spacing:0.05em;margin-bottom:2px;text-transform:uppercase">VALIDADE CONTROLE SEMAFÓRICO</div>
-          <div style="font-size:clamp(15px,4.5cqw,24px);font-weight:900;color:#111;line-height:1.15;word-break:break-word;text-transform:uppercase">${nome}</div>
-        </div>
-        <div style="display:flex;align-items:flex-end;justify-content:between;margin-top:6px">
-          <div style="flex:1">
-            <span style="display:block;font-size:10px;font-weight:800;color:#666;letter-spacing:0.02em">DIA DE VENCIMENTO</span>
-            <span style="font-size:clamp(32px,8cqw,52px);font-weight:900;color:#111;line-height:0.95">${dia}</span>
-          </div>
-          <div style="text-align:right;font-size:10px;font-weight:700;color:#888;line-height:1.2">
-             MÓDULO ETIQBOX<br>
-             CONFERIDO INTERNO
-          </div>
-        </div>
-      </div>
-      <div class="etq-ean">${ean}</div>
-    </div>
-  `;
-}
-
-// Renderizador da Linha de Comando e Totais Rápidos
-function renderFila(){
-  const container = document.getElementById('lscr');
-  const query = document.getElementById('l_srch').value.toLowerCase().trim();
-  
-  let filtrados = filaImpressao;
-  if(filtroRapido === 'critico'){
-    filtrados = filaImpressao.filter(i => calcularDias(i.dia, i.mes, i.ano) <= CONFIG_DIAS.r);
-  } else if(filtroRapido === 'atencao'){
-    filtrados = filaImpressao.filter(i => { const d = calcularDias(i.dia, i.mes, i.ano); return d > CONFIG_DIAS.r && d <= CONFIG_DIAS.g; });
-  }
-  
-  if(query){
-    filtrados = filtrados.filter(i => i.produto.nome.toLowerCase().includes(query) || i.produto.ean.includes(query));
-  }
-  
-  document.getElementById('lcnt').textContent = filaImpressao.reduce((acc,i)=>acc+i.quantidade,0);
-  document.getElementById('btnImprimirTudo').textContent = `Imprimir Lista (${filaImpressao.reduce((acc,i)=>acc+i.quantidade,0)})`;
-  
-  // Atualiza indicadores do cabeçalho rápido
-  let c=0, a=0;
-  filaImpressao.forEach(i => {
-    const d = calcularDias(i.dia, i.mes, i.ano);
-    if(d <= CONFIG_DIAS.r) c += i.quantidade;
-    else if(d <= CONFIG_DIAS.g) a += i.quantidade;
-  });
-  document.getElementById('statCritico').textContent = c;
-  document.getElementById('statAtencao').textContent = a;
-  document.getElementById('statTotal').textContent = filaImpressao.reduce((acc,i)=>acc+i.quantidade,0);
-  
-  if(filtrados.length === 0){
-    container.innerHTML = `<div class="lempty">Nenhuma etiqueta na fila para a filtragem ativa.</div>`;
-    return;
-  }
-  
-  container.innerHTML = filtrados.map(i => {
-    const d = calcularDias(i.dia, i.mes, i.ano);
-    let pill = `<span class="pill pg-pill"><span class="pdot"></span>Longo</span>`;
-    let bCol = "#16a34a";
-    if(d <= CONFIG_DIAS.r) { pill=`<span class="pill pr-pill"><span class="pdot"></span>Crítico</span>`; bCol="#dc2626"; }
-    else if(d <= CONFIG_DIAS.g) { pill=`<span class="pill py-pill"><span class="pdot"></span>Atenção</span>`; bCol="#d97706"; }
-    
-    return `
-      <div class="lcard" style="border-left: 3px solid ${bCol}">
-        <div class="lbody" onclick="carregarLoteParaEdicao(${i.id})">
-          <div class="lrow">
-            <span class="lnome">${i.produto.nome}</span>
-            <span class="lqty">${i.quantidade}x</span>
-          </div>
-          <div class="lmeta">
-            <span class="lval">Venc: <b>${i.dia}/${i.mes}/${i.ano}</b></span>
-            <span class="lmodo">${i.modo.toUpperCase()}</span>
-            ${pill}
-          </div>
-        </div>
-        <div class="lfoot">
-          <button class="lfbtn imp" onclick="imprimirEtiquetaIsolada(${i.id})">Imprimir</button>
-          <button class="lfbtn del" onclick="removerItemFila(${i.id})">Excluir</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function calcularDias(d,m,a){
-  return Math.ceil((new Date(parseInt('20'+a), parseInt(m)-1, parseInt(d)) - new Date().setHours(0,0,0,0)) / (1000*60*60*24));
-}
-function filtrarListaRapido(m){ filtroRapido = m; renderFila(); }
-function focarEan(){ document.getElementById('f_ean').focus(); }
-
-function carregarLoteParaEdicao(id){
-  const item = filaImpressao.find(i => i.id === id);
-  if(!item) return;
-  editandoId = id;
-  selecionarProduto(item.produto);
-  document.getElementById('f_val').value = item.dia + item.mes + item.ano;
-  document.getElementById('f_val').dispatchEvent(new Event('input'));
-  document.getElementById('f_qty').value = item.quantidade;
-  setModo(item.modo);
-  document.getElementById('btnSalvar').innerHTML = '<span>Atualizar Etiqueta</span> <span class="kb">Enter</span>';
-}
-
-function removerItemFila(id){
-  filaImpressao = filaImpressao.filter(i => i.id !== id);
-  toast('i', 'Item removido.');
-  renderFila();
-}
-function limparFilaToda(){ filaImpressao=[]; renderFila(); toast('i', 'Fila limpa.'); }
-
-// Gerador de Documento PDF de Alta Resolução via Stream de Impressão Direta
-function imprimirEtiquetaIsolada(id){
-  const item = filaImpressao.find(i => i.id === id);
-  if(item) dispararImpressaoFisica([item]);
-}
-function imprimirListaCompleta(){
-  if(filaImpressao.length === 0){ toast('e', 'Fila vazia.'); return; }
-  dispararImpressaoFisica(filaImpressao);
-}
-
-function dispararImpressaoFisica(lotes){
-  const jsw = window.open('','','width=900,height=700');
-  let codHtml = `
-    <html>
-    <head>
-      <title>Impressão Premium - Ultra Stock</title>
-      <style>
-        body { margin:0; padding:10px; background:#fff; font-family:Arial,sans-serif; }
-        .grid-print { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        @media print {
-          .grid-print { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; page-break-inside: avoid; }
-          .print-block { page-break-inside: avoid; }
+                body.appendChild(spark);
+            }
         }
-        .etq { width:100%; height:210px; background:#fff; color:#111; border:3px solid #111; border-radius:12px; display:flex; flex-direction:row; overflow:hidden; box-sizing:border-box; position:relative; margin-bottom:10px; }
-        .etq-ean { position:absolute; bottom:3px; right:8px; font-size:9px; font-family:monospace; color:#555; background:rgba(255,255,255,0.9); padding:1px 3px; border-radius:3px; }
-        .etq-left { width:28%; border-right:2.5px solid #111; background:#e4e4e4; display:flex; flex-direction:column; padding:5px; gap:4px; }
-        .etq-chk-row { flex:1; display:flex; position:relative; border-radius:6px; overflow:hidden; }
-        .fb-date { display:flex; flex-direction:column; align-items:center; justify-content:center; width:100%; height:100%; line-height:1; color:#fff; }
-        .fb-mo, .fb-yr { font-size:24px; font-weight:900; display:block; text-align:center; }
-        .fb-xmark { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        .fb-xmark::before, .fb-xmark::after { content:''; position:absolute; width:85%; height:4px; background:rgba(0,0,0,0.85); }
-        .fb-xmark::before { transform:rotate(45deg); } .fb-xmark::after { transform:rotate(-45deg); }
-        .fb-hint { position:absolute; top:2px; right:4px; font-size:7px; font-weight:700; color:#fff; opacity:0.6; text-transform:lowercase; }
-        
-        /* Layout Tira */
-        .etq-tira { width:100%; height:160px; background:#fff; color:#111; border:3px solid #111; box-sizing:border-box; display:flex; flex-direction:column; padding:8px; position:relative; margin-bottom:10px; }
-      </style>
-    </head>
-    <body>
-      <div class="grid-print">
-  `;
-  
-  lotes.forEach(lote => {
-    for(let q=0; q<lote.quantidade; q++){
-      codHtml += `<div class="print-block">${construirHtmlEtiqueta(lote.modo, lote.produto.nome, lote.produto.ean, lote.dia, lote.mes, lote.ano)}</div>`;
-    }
-  });
-  
-  codHtml += `</div><script>window.onload = function(){ window.print(); setTimeout(function(){ window.close(); }, 500); }</s`+`cript></body></html>`;
-  
-  jsw.document.write(codHtml);
-  jsw.document.close();
-}
 
-// Modais Globais de Configuração
-function abrirConfiguracoes(){
-  document.getElementById('cfg_g').value = CONFIG_DIAS.g;
-  document.getElementById('cfg_y').value = CONFIG_DIAS.y;
-  document.getElementById('cfg_r').value = CONFIG_DIAS.r;
-  document.getElementById('ovCfg').classList.add('open');
-}
-function fecharModais(e){
-  if(!e || e.target.classList.contains('ov') || e.target.classList.contains('mcl')){
-    document.getElementById('ovCfg').classList.remove('open');
-  }
-}
-function salvarConfiguracoes(){
-  const g = parseInt(document.getElementById('cfg_g').value)||45;
-  const y = parseInt(document.getElementById('cfg_y').value)||30;
-  const r = parseInt(document.getElementById('cfg_r').value)||15;
-  
-  CONFIG_DIAS = {g, y, r};
-  localStorage.setItem('ue_cfg_dias', JSON.stringify(CONFIG_DIAS));
-  toast('s', 'Parâmetros semafóricos aplicados.');
-  document.getElementById('ovCfg').classList.remove('open');
-  renderFila();
-  atualizarPreviewRealtime();
-}
+        // Inicia o efeito ao carregar a página
+        createSparks();
+    </script>
 
-function toast(tipo, txt){
-  const t = document.getElementById('toast');
-  t.textContent = txt;
-  t.className = "toast " + tipo + " show";
-  setTimeout(() => t.classList.remove('show'), 2500);
-}
-</script>
 </body>
 </html>
